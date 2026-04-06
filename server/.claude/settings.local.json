@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(find /c/Users/afarhat/personal/glucocoach1.0/server -type f ! -path */target/* ! -path */.mvn/*)"
+    ]
+  }
+}
