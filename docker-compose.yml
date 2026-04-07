@@ -37,7 +37,7 @@ services:
     environment:
       - TZ=Etc/UTC
       - NODE_ENV=production
-      - MONGO_CONNECTION=mongodb://cgmuser:cgmpassowrd@mongodb:27017/nightscout
+      - MONGO_CONNECTION=mongodb://cgmuser:cgmpassowrd@mongodb:27017/nightscout?authSource=admin
       - MONGODB_URI=mongodb://cgmuser:cgmpassword@mongodb:27017/nightscout?authSource=admin
       - INSECURE_USE_HTTP=true
       - ENABLE=careportal iob cob basal boluscalc cage sage treatmentnotify cors dbsize
