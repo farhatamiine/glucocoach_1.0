@@ -1,0 +1,76 @@
+version: "1.0"
+services:
+  database:
+    image: postgres:17
+    environment:
+      - POSTGRES_DB=glucocoach
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=cgmpassword
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    networks:
+      - app-network
+
+  mangodb:
+    image: mongo
+    hostname: mongodb
+    environment:
+      - MONGODB_INITDB_ROOT_USERNAME=cgmuser
+      - MONGODB_INITDB_ROOT_PASSWORD=cgmpassowrd
+    ports:
+      - 27017:27017
+    volumes:
+      - ./init:/docker-entrypoint-initdb.d
+      - db:/data/db
+      - configdb:/data/configdb
+      - mongot:/data/mongot
+    networks:
+      - app-network
+  nightscout:
+    image: nightscout/cgm-remote-monitor:latest_dev
+    depends_on:
+      - mangodb
+    ports:
+      - "1337:1337"
+    networks:
+      - app-network
+    environment:
+      - TZ=Etc/UTC
+      - NODE_ENV=production
+      - MONGO_CONNECTION=mongodb://cgmuser:cgmpassowrd@mongodb:27017/nightscout
+      - INSECURE_USE_HTTP=true
+      - ENABLE=careportal iob cob basal boluscalc cage sage treatmentnotify cors dbsize
+      - API_SECRET=48f875fa-0e03-416f-b9d6-19c9afc4e197
+
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    networks:
+      - app-network
+    depends_on:
+      - database
+    ports:
+      - "8080:8080"
+    environment:
+      - SPRING_APPLICATION_NAME=SERVER
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://database:5432/glucocoach
+      - SPRING_DATASOURCE_USERNAME=postgres
+      - SPRING_DATASOURCE_PASSWORD=cgmpassword
+      - SPRING_DATASOURCE_DRIVER-CLASS-NAME=org.postgresql.Driver
+      - SPRING_JPA_HIBERNATE_DDL-AUTO=update
+      - SPRING_JPA_SHOW-SQL=true
+      - SPRING_JPA_PROPERTIES_HIBERNATE_FORMAT_SQL=true
+      - JWT_SECRET=glucocoach-super-secret-key-must-be-at-least-32-characters-long!
+      - JWT_EXPIRATION=86400000
+      - JWT_REFRESH-EXPIRATION=604800000
+
+volumes:
+  db-data:
+  mongot:
+  db:
+  configdb:
+
+networks:
+  app-network:
+    driver: bridge
