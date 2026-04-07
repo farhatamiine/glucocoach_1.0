@@ -15,8 +15,8 @@ services:
     image: mongo
     hostname: mongodb
     environment:
-      - MONGODB_INITDB_ROOT_USERNAME=cgmuser
-      - MONGODB_INITDB_ROOT_PASSWORD=cgmpassword
+      - MONGO_INITDB_ROOT_USERNAME=cgmuser
+      - MONGO_INITDB_ROOT_PASSWORD=cgmpassword
     ports:
       - 27017:27017
     volumes:
