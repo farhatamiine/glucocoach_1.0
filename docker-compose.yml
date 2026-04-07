@@ -16,7 +16,7 @@ services:
     hostname: mongodb
     environment:
       - MONGODB_INITDB_ROOT_USERNAME=cgmuser
-      - MONGODB_INITDB_ROOT_PASSWORD=cgmpassowrd
+      - MONGODB_INITDB_ROOT_PASSWORD=cgmpassword
     ports:
       - 27017:27017
     volumes:
@@ -37,7 +37,7 @@ services:
     environment:
       - TZ=Etc/UTC
       - NODE_ENV=production
-      - MONGO_CONNECTION=mongodb://cgmuser:cgmpassowrd@mongodb:27017/nightscout?authSource=admin
+      - MONGO_CONNECTION=mongodb://cgmuser:cgmpassword@mongodb:27017/nightscout?authSource=admin
       - MONGODB_URI=mongodb://cgmuser:cgmpassword@mongodb:27017/nightscout?authSource=admin
       - INSECURE_USE_HTTP=true
       - ENABLE=careportal iob cob basal boluscalc cage sage treatmentnotify cors dbsize
