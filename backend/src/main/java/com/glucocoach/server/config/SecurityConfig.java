@@ -30,21 +30,23 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-            .csrf(csrf -> csrf.disable())
-            .authorizeHttpRequests(auth -> auth
-                // /api/auth/** is public — register, login, refresh, logout
-                .requestMatchers("/api/auth/**").permitAll()
-                // every other endpoint requires a valid JWT
-                .anyRequest().authenticated()
-            )
-            // Stateless: Spring must NOT create or use HTTP sessions
-            // Each request is authenticated from the JWT alone
-            .sessionManagement(session -> session
-                .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
-            )
-            .authenticationProvider(authenticationProvider())
-            // Run our JWT filter BEFORE Spring's built-in login filter
-            .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
+                .csrf(csrf -> csrf.disable())
+                .authorizeHttpRequests(auth -> auth
+                        // /api/auth/** is public — register, login, refresh, logout
+                        .requestMatchers("/api/auth/**",
+                                "/v3/api-docs/**",
+                                "/swagger-ui/**",
+                                "/swagger-ui.html")
+                        .permitAll()
+                        // every other endpoint requires a valid JWT
+                        .anyRequest().authenticated())
+                // Stateless: Spring must NOT create or use HTTP sessions
+                // Each request is authenticated from the JWT alone
+                .sessionManagement(session -> session
+                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .authenticationProvider(authenticationProvider())
+                // Run our JWT filter BEFORE Spring's built-in login filter
+                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
@@ -57,7 +59,8 @@ public class SecurityConfig {
         return provider;
     }
 
-    // Exposes the AuthenticationManager as a bean so AuthService can inject it if needed
+    // Exposes the AuthenticationManager as a bean so AuthService can inject it if
+    // needed
     @Bean
     public AuthenticationManager authenticationManager(AuthenticationConfiguration config)
             throws Exception {
