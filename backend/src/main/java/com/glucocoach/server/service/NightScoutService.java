@@ -1,5 +1,6 @@
 package com.glucocoach.server.service;
 
+import java.net.URI;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
@@ -7,8 +8,6 @@ import java.util.Collections;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -28,21 +27,18 @@ public class NightScoutService {
     @Value("${nightscout-url}")
     private String nightscoutUrl;
 
-    private List<NightscoutEntryDTO> fetchEntries(String url) {
-        HttpHeaders headers = new HttpHeaders();
-        headers.set("api-secret", apiSecret);
-        HttpEntity<Void> entity = new HttpEntity<>(headers);
+    private List<NightscoutEntryDTO> fetchEntries(URI uri) {
         ResponseEntity<NightscoutEntryDTO[]> response = restTemplate.exchange(
-                url,
+                uri,
                 HttpMethod.GET,
-                entity,
+                null, // ← no headers at all
                 NightscoutEntryDTO[].class);
         return response.getBody() != null ? Arrays.asList(response.getBody()) : Collections.emptyList();
     }
 
     public List<NightscoutEntryDTO> getEntries(int count) {
         String url = nightscoutUrl + "/api/v1/entries.json?count=" + count;
-        return fetchEntries(url);
+        return fetchEntries(URI.create(url));
     }
 
     public List<NightscoutEntryDTO> getEntriesByDay(int days) {
@@ -50,7 +46,7 @@ public class NightScoutService {
         String url = nightscoutUrl + "/api/v1/entries.json"
                 + "?find[dateString][$gte]=" + from
                 + "&count=999999";
-        return fetchEntries(url);
+        return fetchEntries(URI.create(url));
     }
 
 }
