@@ -23,7 +23,7 @@ The pipeline performs the following steps on every push to the `main` branch:
 2. **Build and Push Docker Image**: Builds a Docker image using `backend/Dockerfile` and pushes it to the GitHub Container Registry (GHCR).
 3. **Deploy to VPS**: 
     - Connects to the VPS via SSH.
-    - Clones or updates the repository in `~/glucocoach`.
+    - Clones or updates the repository in `~/opt/glucocoach`.
     - Logs into GHCR.
     - Pulls the latest image and restarts the services using `docker compose`.
 
@@ -35,8 +35,8 @@ If the automated deployment fails, you can deploy manually by following these st
 
 1. **Clone the repository** (if not already done):
    ```bash
-   git clone https://github.com/YOUR_USERNAME/glucocoach1.0.git ~/glucocoach
-   cd ~/glucocoach
+   git clone https://github.com/YOUR_USERNAME/glucocoach1.0.git ~/opt/glucocoach
+   cd ~/opt/glucocoach
    ```
 
 2. **Pull the latest changes**:
