@@ -94,8 +94,8 @@ jobs:
                   envs: GITHUB_TOKEN,API_IMAGE
                   script: |
                       # Create app directory if it doesn't exist
-                      mkdir -p ~/opt/glucocoach
-                      cd ~/opt/glucocoach
+                      mkdir -p /opt/glucocoach
+                      cd /opt/glucocoach
 
                       # Clone or pull latest code
                       if [ ! -d ".git" ]; then
