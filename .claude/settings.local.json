@@ -1,7 +1,15 @@
 {
   "permissions": {
     "allow": [
-      "Bash(./mvnw test *)"
+      "Bash(./mvnw test *)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(./mvnw compile *)",
+      "Bash(grep -E \"^[\\\\+\\\\-].*[[:space:]]$\")",
+      "Bash(xmllint --noout src/main/pom.xml)",
+      "Bash(xmllint --noout pom.xml)",
+      "Bash(mvn clean *)",
+      "Bash(./mvnw clean *)"
     ]
   }
 }

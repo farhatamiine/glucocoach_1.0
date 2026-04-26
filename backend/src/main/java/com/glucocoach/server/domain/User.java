@@ -72,6 +72,9 @@ public class User implements UserDetails {
     @EqualsAndHashCode.Exclude
     private java.time.Instant resetTokenExpiresAt;
 
+    @Column(nullable = true)
+    private String fcmToken;
+
     @OneToOne(mappedBy = "user", cascade = CascadeType.ALL)
     private Profile profile;
 
