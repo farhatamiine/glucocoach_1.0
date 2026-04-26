@@ -4,6 +4,7 @@ import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
 
+import com.glucocoach.server.exception.MealAnalysisException;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
@@ -82,6 +83,19 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
                                 .details(request.getDescription(false).replace("uri=", ""))
                                 .build();
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(error);
+        }
+
+        @ExceptionHandler(MealAnalysisException.class)
+        public ResponseEntity<ErrorResponse> handleMealAnalysisException(
+                        MealAnalysisException ex, WebRequest request) {
+                ErrorResponse error = ErrorResponse.builder()
+                                .status(HttpStatus.BAD_GATEWAY.value())
+                                .timestamp(Instant.now())
+                                .error("Meal Analysis Failed")
+                                .message(ex.getMessage())
+                                .details(request.getDescription(false).replace("uri=", ""))
+                                .build();
+                return ResponseEntity.status(HttpStatus.BAD_GATEWAY).body(error);
         }
 
         // ResponseEntityExceptionHandler already "owns" MethodArgumentNotValidException.
