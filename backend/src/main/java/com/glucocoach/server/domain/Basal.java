@@ -2,8 +2,6 @@ package com.glucocoach.server.domain;
 
 import java.time.LocalDateTime;
 
-import org.springframework.hateoas.RepresentationModel;
-
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
@@ -25,7 +23,7 @@ import lombok.ToString;
 @ToString(exclude = "user")
 @Entity
 @Table(name = "basal")
-public class Basal extends RepresentationModel<Basal> {
+public class Basal {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
