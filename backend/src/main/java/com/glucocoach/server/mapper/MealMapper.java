@@ -1,7 +1,6 @@
 package com.glucocoach.server.mapper;
 
 import org.springframework.stereotype.Component;
-
 import com.glucocoach.server.domain.Meal;
 import com.glucocoach.server.dto.request.MealRequest;
 import com.glucocoach.server.dto.response.MealResponse;
@@ -24,6 +23,9 @@ public class MealMapper {
         response.setCarbs(meal.getCarbs());
         response.setTimestamp(meal.getTimestamp());
         response.setUserId(meal.getUser().getId());
+        response.setImageUrl(meal.getImageUrl());
+        response.setAnalysisResult(meal.getAnalysisResult());
+        response.setEstimatedCarbs(meal.getEstimatedCarbs());
         return response;
     }
 }
