@@ -19,7 +19,7 @@ import java.io.IOException;
 @ConditionalOnExpression("!'${app.firebase.credentials-path:}'.trim().isEmpty()")
 public class FcmConfig {
 
-    @Value("${app.firebase.credentials-path}")
+    @Value("${app.firebase.credentials-path:}")
     private String credentialsPath;
 
     @Bean
@@ -30,14 +30,19 @@ public class FcmConfig {
                     "Firebase credentials file not found at: " + credentialsPath +
                     ". Fix app.firebase.credentials-path, or leave it blank to disable FCM.");
         }
-        GoogleCredentials credentials = GoogleCredentials.fromStream(
-                new FileInputStream(credentialsFile));
+        GoogleCredentials credentials;
+        try (FileInputStream fis = new FileInputStream(credentialsFile)) {
+            credentials = GoogleCredentials.fromStream(fis);
+        }
         FirebaseOptions options = FirebaseOptions.builder()
                 .setCredentials(credentials)
                 .build();
-        if (FirebaseApp.getApps().isEmpty()) {
+        try {
+            FirebaseApp.getInstance();
+        } catch (IllegalStateException e) {
             FirebaseApp.initializeApp(options);
         }
+        log.info("Firebase FCM configured using credentials at: {}", credentialsPath);
         return FirebaseMessaging.getInstance();
     }
 }
