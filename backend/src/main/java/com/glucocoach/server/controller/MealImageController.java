@@ -39,34 +39,56 @@ public class MealImageController {
     public ResponseEntity<MealResponse> uploadImage(
             @PathVariable Long id,
             @RequestParam("file") MultipartFile file,
-            @AuthenticationPrincipal User user) throws IOException {
+            @AuthenticationPrincipal User user) {
 
         Meal meal = mealRepository.findByIdAndUserId(id, user.getId())
                 .orElseThrow(() -> new ResourceNotFoundException("Meal not found with id: " + id));
 
-        // Read bytes once — used for both file write and LLM analysis
-        byte[] fileBytes = file.getBytes();
+        byte[] fileBytes;
+        try {
+            fileBytes = file.getBytes();
+        } catch (IOException e) {
+            throw new RuntimeException("Failed to read uploaded file", e);
+        }
 
         // Save to uploads/meals/{userId}/{uuid}.jpg (relative to working dir)
         // In Docker: working_dir=/app → resolves to /app/uploads/meals/... matching the volume mount
         Path dir = Paths.get("uploads", "meals", user.getId().toString());
-        Files.createDirectories(dir);
-        Path filePath = dir.resolve(UUID.randomUUID() + ".jpg");
-        Files.write(filePath, fileBytes);
-        meal.setImageUrl(filePath.toString());
-
-        MealAnalysisResult result = llmMealAnalysisService.analyze(fileBytes);
-
-        meal.setAnalysisResult(objectMapper.writeValueAsString(result));
-        meal.setEstimatedCarbs(result.estimatedCarbs());
-        if (!StringUtils.hasText(meal.getName())) {
-            meal.setName(result.name());
+        Path filePath;
+        try {
+            Files.createDirectories(dir);
+            filePath = dir.resolve(UUID.randomUUID() + ".jpg");
+            Files.write(filePath, fileBytes);
+        } catch (IOException e) {
+            throw new RuntimeException("Failed to store meal image file", e);
         }
 
-        Meal saved = mealRepository.save(meal);
-        log.info("Meal {} image uploaded and analyzed: estimatedCarbs={}, confidence={}",
-                id, result.estimatedCarbs(), result.confidence());
+        try {
+            // imageUrl stores the local file path (not a URL) — for internal reference only.
+            // If a public URL is needed, add a static resource mapping and store /uploads/... here.
+            meal.setImageUrl(filePath.toString());
 
-        return ResponseEntity.ok(mealMapper.toResponse(saved));
+            MealAnalysisResult result = llmMealAnalysisService.analyze(fileBytes);
+
+            meal.setAnalysisResult(objectMapper.writeValueAsString(result));
+            meal.setEstimatedCarbs(result.estimatedCarbs());
+            if (!StringUtils.hasText(meal.getName())) {
+                meal.setName(result.name());
+            }
+
+            Meal saved = mealRepository.save(meal);
+            log.info("Meal {} image uploaded and analyzed: estimatedCarbs={}, confidence={}",
+                    id, result.estimatedCarbs(), result.confidence());
+
+            return ResponseEntity.ok(mealMapper.toResponse(saved));
+        } catch (Exception e) {
+            // File was written — clean up the orphan before re-throwing
+            try {
+                Files.deleteIfExists(filePath);
+            } catch (IOException deleteEx) {
+                log.warn("Failed to clean up orphaned upload {}: {}", filePath, deleteEx.getMessage());
+            }
+            throw (e instanceof RuntimeException re) ? re : new RuntimeException(e);
+        }
     }
 }
