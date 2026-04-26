@@ -203,4 +203,38 @@ class UserServiceTest {
 
         verify(userRepository, never()).save(any());
     }
+
+    // ── saveFcmToken ──────────────────────────────────────────────────────────
+
+    @Test
+    void saveFcmToken_shouldSetTokenAndSave_whenUserExists() {
+        // Arrange
+        String email = "john@example.com";
+        String fcmToken = "test_fcm_token_123";
+
+        when(userRepository.findByEmail(email)).thenReturn(Optional.of(user));
+
+        // Act
+        userService.saveFcmToken(email, fcmToken);
+
+        // Assert
+        assertThat(user.getFcmToken()).isEqualTo(fcmToken);
+        verify(userRepository).save(user);
+    }
+
+    @Test
+    void saveFcmToken_shouldThrowResourceNotFoundException_whenUserDoesNotExist() {
+        // Arrange
+        String email = "missing@example.com";
+        String fcmToken = "test_fcm_token_123";
+
+        when(userRepository.findByEmail(email)).thenReturn(Optional.empty());
+
+        // Act & Assert
+        assertThatThrownBy(() -> userService.saveFcmToken(email, fcmToken))
+                .isInstanceOf(ResourceNotFoundException.class)
+                .hasMessageContaining(email);
+
+        verify(userRepository, never()).save(any());
+    }
 }
