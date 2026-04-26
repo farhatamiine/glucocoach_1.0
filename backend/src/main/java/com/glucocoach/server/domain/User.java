@@ -8,6 +8,7 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
 import jakarta.persistence.CascadeType;
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -17,6 +18,7 @@ import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
 
@@ -57,7 +59,18 @@ public class User implements UserDetails {
     LocalDate birthDate;
     String email;
 
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
     String password;
+
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
+    @Column(unique = true)
+    private String resetTokenHash;
+
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
+    private java.time.Instant resetTokenExpiresAt;
 
     @OneToOne(mappedBy = "user", cascade = CascadeType.ALL)
     private Profile profile;

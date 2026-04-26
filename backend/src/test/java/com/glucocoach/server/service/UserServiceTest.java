@@ -1,11 +1,15 @@
 package com.glucocoach.server.service;
 
-import com.glucocoach.server.domain.User;
-import com.glucocoach.server.dto.request.UserRequest;
-import com.glucocoach.server.dto.response.UserResponse;
-import com.glucocoach.server.exception.ResourceNotFoundException;
-import com.glucocoach.server.mapper.UserMapper;
-import com.glucocoach.server.repository.UserRepository;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
+import java.time.LocalDate;
+import java.util.Optional;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -13,12 +17,16 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.time.LocalDate;
-import java.util.Optional;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.Mockito.*;
+import com.glucocoach.server.domain.User;
+import com.glucocoach.server.dto.request.ChangePasswordRequest;
+import com.glucocoach.server.dto.request.UserRequest;
+import com.glucocoach.server.dto.response.UserResponse;
+import com.glucocoach.server.exception.ResourceNotFoundException;
+import com.glucocoach.server.exception.UnauthorizedException;
+import com.glucocoach.server.mapper.UserMapper;
+import com.glucocoach.server.repository.RefreshTokenRepository;
+import com.glucocoach.server.repository.UserRepository;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
 @ExtendWith(MockitoExtension.class)
 class UserServiceTest {
@@ -27,7 +35,13 @@ class UserServiceTest {
     private UserRepository userRepository;
 
     @Mock
+    private RefreshTokenRepository refreshTokenRepository;
+
+    @Mock
     private UserMapper userMapper;
+
+    @Mock
+    private PasswordEncoder passwordEncoder;
 
     @InjectMocks
     private UserService userService;
@@ -42,6 +56,7 @@ class UserServiceTest {
                 .firstName("John")
                 .lastName("Doe")
                 .email("john@example.com")
+                .password("old_encoded_password")
                 .birthDate(LocalDate.of(1990, 1, 15))
                 .build();
 
@@ -146,5 +161,46 @@ class UserServiceTest {
                 .hasMessageContaining("missing@example.com");
 
         verify(userRepository, never()).delete(any());
+    }
+
+    // ── changePassword ────────────────────────────────────────────────────────
+
+    @Test
+    void changePassword_shouldUpdatePassword_whenOldPasswordValid() {
+        // Arrange
+        String email = "john@example.com";
+        ChangePasswordRequest request = new ChangePasswordRequest();
+        request.setOldPassword("old_secret");
+        request.setNewPassword("new_secret");
+
+        when(userRepository.findByEmail(email)).thenReturn(Optional.of(user));
+        when(passwordEncoder.matches("old_secret", user.getPassword())).thenReturn(true);
+        when(passwordEncoder.encode("new_secret")).thenReturn("encoded_new_secret");
+
+        // Act
+        userService.changePassword(email, request);
+
+        // Assert
+        assertThat(user.getPassword()).isEqualTo("encoded_new_secret");
+        verify(userRepository).save(user);
+        verify(refreshTokenRepository).deleteByUser(user);
+    }
+
+    @Test
+    void changePassword_shouldThrowUnauthorizedException_whenOldPasswordInvalid() {
+        // Arrange
+        String email = "john@example.com";
+        ChangePasswordRequest request = new ChangePasswordRequest();
+        request.setOldPassword("wrong_secret");
+
+        when(userRepository.findByEmail(email)).thenReturn(Optional.of(user));
+        when(passwordEncoder.matches("wrong_secret", user.getPassword())).thenReturn(false);
+
+        // Act & Assert
+        assertThatThrownBy(() -> userService.changePassword(email, request))
+                .isInstanceOf(UnauthorizedException.class)
+                .hasMessageContaining("Invalid old password");
+
+        verify(userRepository, never()).save(any());
     }
 }

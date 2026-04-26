@@ -1,13 +1,17 @@
 package com.glucocoach.server.service;
 
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.glucocoach.server.domain.User;
+import com.glucocoach.server.dto.request.ChangePasswordRequest;
 import com.glucocoach.server.dto.request.UserRequest;
 import com.glucocoach.server.dto.response.UserResponse;
 import com.glucocoach.server.exception.ResourceNotFoundException;
+import com.glucocoach.server.exception.UnauthorizedException;
 import com.glucocoach.server.mapper.UserMapper;
+import com.glucocoach.server.repository.RefreshTokenRepository;
 import com.glucocoach.server.repository.UserRepository;
 
 import lombok.RequiredArgsConstructor;
@@ -17,7 +21,9 @@ import lombok.RequiredArgsConstructor;
 public class UserService {
 
     private final UserRepository userRepository;
+    private final RefreshTokenRepository refreshTokenRepository;
     private final UserMapper userMapper;
+    private final PasswordEncoder passwordEncoder;
 
     // ── GET ME ────────────────────────────────────────────────────────────────
     // Called by GET /api/users/me
@@ -55,5 +61,19 @@ public class UserService {
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "User not found with email: " + email));
         userRepository.delete(user);
+    }
+
+    @Transactional
+    public void changePassword(String email, ChangePasswordRequest request) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
+        if (!passwordEncoder.matches(request.getOldPassword(), user.getPassword())) {
+            throw new UnauthorizedException("Invalid old password");
+        }
+
+        user.setPassword(passwordEncoder.encode(request.getNewPassword()));
+        userRepository.save(user);
+        refreshTokenRepository.deleteByUser(user);
     }
 }
