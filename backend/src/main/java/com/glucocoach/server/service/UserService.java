@@ -11,6 +11,7 @@ import com.glucocoach.server.dto.response.UserResponse;
 import com.glucocoach.server.exception.ResourceNotFoundException;
 import com.glucocoach.server.exception.UnauthorizedException;
 import com.glucocoach.server.mapper.UserMapper;
+import com.glucocoach.server.repository.RefreshTokenRepository;
 import com.glucocoach.server.repository.UserRepository;
 
 import lombok.RequiredArgsConstructor;
@@ -20,6 +21,7 @@ import lombok.RequiredArgsConstructor;
 public class UserService {
 
     private final UserRepository userRepository;
+    private final RefreshTokenRepository refreshTokenRepository;
     private final UserMapper userMapper;
     private final PasswordEncoder passwordEncoder;
 
@@ -72,5 +74,6 @@ public class UserService {
 
         user.setPassword(passwordEncoder.encode(request.getNewPassword()));
         userRepository.save(user);
+        refreshTokenRepository.deleteByUser(user);
     }
 }

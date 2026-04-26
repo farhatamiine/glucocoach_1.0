@@ -24,6 +24,7 @@ import com.glucocoach.server.dto.response.UserResponse;
 import com.glucocoach.server.exception.ResourceNotFoundException;
 import com.glucocoach.server.exception.UnauthorizedException;
 import com.glucocoach.server.mapper.UserMapper;
+import com.glucocoach.server.repository.RefreshTokenRepository;
 import com.glucocoach.server.repository.UserRepository;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
@@ -32,6 +33,9 @@ class UserServiceTest {
 
     @Mock
     private UserRepository userRepository;
+
+    @Mock
+    private RefreshTokenRepository refreshTokenRepository;
 
     @Mock
     private UserMapper userMapper;
@@ -179,6 +183,7 @@ class UserServiceTest {
         // Assert
         assertThat(user.getPassword()).isEqualTo("encoded_new_secret");
         verify(userRepository).save(user);
+        verify(refreshTokenRepository).deleteByUser(user);
     }
 
     @Test

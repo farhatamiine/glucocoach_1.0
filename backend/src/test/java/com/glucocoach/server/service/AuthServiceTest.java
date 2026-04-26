@@ -7,6 +7,9 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.time.Instant;
 import java.util.Optional;
 
@@ -210,28 +213,42 @@ public class AuthServiceTest {
 
         when(userRepository.findByEmail(email)).thenReturn(Optional.of(user));
 
-        // Act
-        String token = authService.forgetPassword(request);
+        // Act — returns void; token must NOT be exposed to callers
+        authService.forgetPassword(request);
 
-        // Assert
-        assertThat(token).isNotBlank();
-        assertThat(user.getResetToken()).isEqualTo(token);
+        // Assert — hash was stored on the user and persisted; raw token never returned
+        assertThat(user.getResetTokenHash()).isNotBlank();
         assertThat(user.getResetTokenExpiresAt()).isAfter(Instant.now());
         verify(userRepository).save(user);
+    }
+
+    @Test
+    void forgetPassword_shouldDoNothing_whenUserNotFound() {
+        // Arrange
+        ForgetPasswordRequest request = new ForgetPasswordRequest();
+        request.setEmail("unknown@example.com");
+
+        when(userRepository.findByEmail("unknown@example.com")).thenReturn(Optional.empty());
+
+        // Act — must not throw (anti-enumeration: same silent response for unknown emails)
+        authService.forgetPassword(request);
+
+        // Assert — no persistence side-effects
+        verify(userRepository, never()).save(any());
     }
 
     @Test
     void resetPassword_shouldUpdatePassword_whenTokenValid() {
         // Arrange
         String token = "valid_token";
-        user.setResetToken(token);
+        user.setResetTokenHash(sha256Hex(token));
         user.setResetTokenExpiresAt(Instant.now().plusSeconds(3600));
 
         ResetPasswordRequest request = new ResetPasswordRequest();
         request.setToken(token);
         request.setNewPassword("new_secret");
 
-        when(userRepository.findByResetToken(token)).thenReturn(Optional.of(user));
+        when(userRepository.findByResetTokenHash(sha256Hex(token))).thenReturn(Optional.of(user));
         when(passwordEncoder.encode("new_secret")).thenReturn("new_encoded_password");
 
         // Act
@@ -239,25 +256,58 @@ public class AuthServiceTest {
 
         // Assert
         assertThat(user.getPassword()).isEqualTo("new_encoded_password");
-        assertThat(user.getResetToken()).isNull();
+        assertThat(user.getResetTokenHash()).isNull();
         verify(userRepository).save(user);
+        verify(refreshTokenRepository).deleteByUser(user);
     }
 
     @Test
     void resetPassword_shouldThrowException_whenTokenExpired() {
         // Arrange
         String token = "expired_token";
-        user.setResetToken(token);
+        user.setResetTokenHash(sha256Hex(token));
         user.setResetTokenExpiresAt(Instant.now().minusSeconds(3600));
 
         ResetPasswordRequest request = new ResetPasswordRequest();
         request.setToken(token);
 
-        when(userRepository.findByResetToken(token)).thenReturn(Optional.of(user));
+        when(userRepository.findByResetTokenHash(sha256Hex(token))).thenReturn(Optional.of(user));
 
         // Act & Assert
         assertThatThrownBy(() -> authService.resetPassword(request))
                 .isInstanceOf(UnauthorizedException.class)
                 .hasMessageContaining("expired");
+    }
+
+    @Test
+    void resetPassword_shouldThrowException_whenExpiryIsNull() {
+        // Arrange — token exists but expiry was never set; must not NPE
+        String token = "null_expiry_token";
+        user.setResetTokenHash(sha256Hex(token));
+        user.setResetTokenExpiresAt(null);
+
+        ResetPasswordRequest request = new ResetPasswordRequest();
+        request.setToken(token);
+
+        when(userRepository.findByResetTokenHash(sha256Hex(token))).thenReturn(Optional.of(user));
+
+        // Act & Assert
+        assertThatThrownBy(() -> authService.resetPassword(request))
+                .isInstanceOf(UnauthorizedException.class)
+                .hasMessageContaining("expired");
+    }
+
+    private static String sha256Hex(String input) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] hash = digest.digest(input.getBytes(StandardCharsets.UTF_8));
+            StringBuilder sb = new StringBuilder(hash.length * 2);
+            for (byte b : hash) {
+                sb.append(String.format("%02x", b));
+            }
+            return sb.toString();
+        } catch (NoSuchAlgorithmException e) {
+            throw new IllegalStateException("SHA-256 not available", e);
+        }
     }
 }

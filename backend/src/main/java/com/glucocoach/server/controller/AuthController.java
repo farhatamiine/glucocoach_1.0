@@ -70,11 +70,11 @@ public class AuthController {
     }
 
     // ── POST /api/auth/forget-password ────────────────────────────────────────
-    // Public endpoint — sends (returns) a reset token to the user's email
+    // Public endpoint — always returns the same generic message to prevent user enumeration
     @PostMapping("/forget-password")
     public ResponseEntity<String> forgetPassword(@Valid @RequestBody ForgetPasswordRequest request) {
-        String token = authService.forgetPassword(request);
-        return ResponseEntity.ok("Reset token: " + token);
+        authService.forgetPassword(request);
+        return ResponseEntity.ok("If an account with that email exists, you will receive reset instructions");
     }
 
     // ── POST /api/auth/reset-password ─────────────────────────────────────────

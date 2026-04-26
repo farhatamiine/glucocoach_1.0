@@ -11,5 +11,5 @@ import com.glucocoach.server.domain.User;
 public interface UserRepository extends JpaRepository<User, Long> {
     Optional<User> findByEmail(String email);
     boolean existsByEmail(String email);
-    Optional<User> findByResetToken(String resetToken);
+    Optional<User> findByResetTokenHash(String resetTokenHash);
     }

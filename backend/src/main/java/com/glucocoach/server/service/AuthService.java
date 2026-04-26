@@ -1,5 +1,8 @@
 package com.glucocoach.server.service;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.time.Instant;
 import java.util.UUID;
 
@@ -148,34 +151,47 @@ public class AuthService {
     }
 
     @Transactional
-    public String forgetPassword(ForgetPasswordRequest request) {
-        User user = userRepository.findByEmail(request.getEmail())
-                .orElseThrow(() -> new ResourceNotFoundException("User not found with email: " + request.getEmail()));
-
-        String token = UUID.randomUUID().toString();
-        user.setResetToken(token);
-        user.setResetTokenExpiresAt(Instant.now().plusSeconds(3600)); // 1 hour expiry
-        userRepository.save(user);
-
-        // In a real app, send this token via email.
-        return token;
+    public void forgetPassword(ForgetPasswordRequest request) {
+        userRepository.findByEmail(request.getEmail()).ifPresent(user -> {
+            String rawToken = UUID.randomUUID().toString();
+            user.setResetTokenHash(sha256Hex(rawToken));
+            user.setResetTokenExpiresAt(Instant.now().plusSeconds(3600));
+            userRepository.save(user);
+            // TODO: pass rawToken to email-sending component
+        });
+        // Silent no-op when email not found — prevents user enumeration
     }
 
     @Transactional
     public void resetPassword(ResetPasswordRequest request) {
-        User user = userRepository.findByResetToken(request.getToken())
+        User user = userRepository.findByResetTokenHash(sha256Hex(request.getToken()))
                 .orElseThrow(() -> new UnauthorizedException("Invalid or expired reset token"));
 
-        if (user.getResetTokenExpiresAt().isBefore(Instant.now())) {
-            user.setResetToken(null);
+        if (user.getResetTokenExpiresAt() == null || user.getResetTokenExpiresAt().isBefore(Instant.now())) {
+            user.setResetTokenHash(null);
             user.setResetTokenExpiresAt(null);
             userRepository.save(user);
             throw new UnauthorizedException("Reset token has expired");
         }
 
         user.setPassword(passwordEncoder.encode(request.getNewPassword()));
-        user.setResetToken(null);
+        user.setResetTokenHash(null);
         user.setResetTokenExpiresAt(null);
         userRepository.save(user);
+        refreshTokenRepository.deleteByUser(user);
+    }
+
+    private static String sha256Hex(String input) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] hash = digest.digest(input.getBytes(StandardCharsets.UTF_8));
+            StringBuilder sb = new StringBuilder(hash.length * 2);
+            for (byte b : hash) {
+                sb.append(String.format("%02x", b));
+            }
+            return sb.toString();
+        } catch (NoSuchAlgorithmException e) {
+            throw new IllegalStateException("SHA-256 not available", e);
+        }
     }
 }
