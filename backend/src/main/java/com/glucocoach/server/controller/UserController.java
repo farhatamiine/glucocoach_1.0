@@ -4,6 +4,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -11,6 +12,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.glucocoach.server.domain.User;
 import com.glucocoach.server.dto.request.ChangePasswordRequest;
+import com.glucocoach.server.dto.request.FcmTokenRequest;
 import com.glucocoach.server.dto.request.UserRequest;
 import com.glucocoach.server.dto.response.UserResponse;
 import com.glucocoach.server.service.UserService;
@@ -66,5 +68,16 @@ public class UserController {
             @Valid @RequestBody ChangePasswordRequest request) {
         userService.changePassword(currentUser.getEmail(), request);
         return ResponseEntity.noContent().build();
+    }
+
+    // ── PATCH /api/users/fcm-token ────────────────────────────────────────────
+    // Registers the device FCM token for push notification routing
+    // Not added to permitAll — JWT required
+    @PatchMapping("/fcm-token")
+    public ResponseEntity<Void> updateFcmToken(
+            @AuthenticationPrincipal User currentUser,
+            @Valid @RequestBody FcmTokenRequest request) {
+        userService.saveFcmToken(currentUser.getEmail(), request.getFcmToken());
+        return ResponseEntity.ok().build();
     }
 }

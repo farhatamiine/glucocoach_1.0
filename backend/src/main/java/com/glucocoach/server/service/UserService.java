@@ -76,4 +76,13 @@ public class UserService {
         userRepository.save(user);
         refreshTokenRepository.deleteByUser(user);
     }
+
+    @Transactional
+    public void saveFcmToken(String email, String fcmToken) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "User not found with email: " + email));
+        user.setFcmToken(fcmToken);
+        userRepository.save(user);
+    }
 }
