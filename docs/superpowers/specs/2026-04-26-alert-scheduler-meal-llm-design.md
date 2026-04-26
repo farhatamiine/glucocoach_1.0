@@ -76,11 +76,13 @@ Saves `fcmToken` on the authenticated user. Not added to `permitAll` in `Securit
 - Reads `app.firebase.credentials-path` via `@Value`
 - **Edge case — blank string:** `@ConditionalOnProperty` only guards against the property being
   *absent*. The default `${FIREBASE_CREDENTIALS_PATH:}` resolves to an empty string, which means
-  the property IS present and the condition still matches. The `@Bean` method must therefore also
-  check `StringUtils.hasText(credentialsPath)` and whether the file exists. If either check fails,
-  log a warning and return `null` from the `@Bean` method (Spring 6+ handles null `@Bean` returns
-  by simply not registering the bean, making `Optional<FirebaseMessaging>` resolve to
-  `Optional.empty()`).
+  the property IS present and the condition still matches. Guard with a second
+  `@ConditionalOnExpression("!'\${app.firebase.credentials-path:}'.trim().isEmpty()")` on the
+  `@Configuration` class so the bean is skipped entirely when the path is blank — avoiding the
+  Spring warning that `null`-returning `@Bean` methods produce. The `@Bean` method should still
+  check that the file exists at runtime and throw `IllegalStateException` with a clear message
+  if it does not (misconfiguration at startup is better than a silent no-op in prod). Add a
+  comment in the source explaining both guards so the intent is clear.
 - If file exists and path is non-blank → initialize `FirebaseApp` via `FileInputStream` +
   `GoogleCredentials.fromStream()`
 - Exposes `@Bean FirebaseMessaging`
@@ -152,7 +154,7 @@ app.alert.check-interval-ms=60000
         EMAIL → log.info("EMAIL not implemented, user {}", user.getId())
         SMS   → log.info("SMS not implemented, user {}", user.getId())
       Save AlertHistory:
-        triggeredAt   = Instant.now() / LocalDateTime.now()
+        triggeredAt   = LocalDateTime.now()   // field type is LocalDateTime — not Instant
         glucoseValue  = sgv (as Double)
         message       = body
         direction     = LOW | HIGH
