@@ -55,8 +55,16 @@ public class GlucoseAlertScheduler {
             return;
         }
 
-        double sgv = entries.get(0).getSgv();   // Integer auto-unboxed to double
+        Integer rawSgv = entries.get(0).getSgv();
+        if (rawSgv == null) {
+            log.warn("Nightscout entry has no SGV for user {} — skipping", user.getId());
+            return;
+        }
+        double sgv = rawSgv;
 
+        // Best-effort: each AlertHistory save runs in its own implicit transaction.
+        // A save failure for alert N will log + skip N but commits for 1..N-1 survive.
+        // Add @Transactional here only if all-or-nothing semantics are required.
         for (Alert alert : alerts) {
             AlertDirection direction;
             if (sgv < alert.getThresholdLow()) {
