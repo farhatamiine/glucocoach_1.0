@@ -12,4 +12,5 @@ import com.glucocoach.server.domain.Alert;
 public interface AlertRepository extends JpaRepository<Alert, Long> {
     List<Alert> findByUserId(Long userId);
     Optional<Alert> findByIdAndUserId(Long id, Long userId);
+    List<Alert> findByActiveTrue();
 }
