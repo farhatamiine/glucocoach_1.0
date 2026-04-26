@@ -1,6 +1,7 @@
 package com.glucocoach.server.service;
 
 import java.time.Instant;
+import java.util.UUID;
 
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -8,9 +9,11 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.glucocoach.server.domain.RefreshToken;
 import com.glucocoach.server.domain.User;
+import com.glucocoach.server.dto.request.ForgetPasswordRequest;
 import com.glucocoach.server.dto.request.LoginRequest;
 import com.glucocoach.server.dto.request.RefreshRequest;
 import com.glucocoach.server.dto.request.RegisterRequest;
+import com.glucocoach.server.dto.request.ResetPasswordRequest;
 import com.glucocoach.server.dto.response.AuthResponse;
 import com.glucocoach.server.exception.DuplicateEmailException;
 import com.glucocoach.server.exception.ResourceNotFoundException;
@@ -142,5 +145,37 @@ public class AuthService {
         refreshTokenRepository.findByToken(request.getRefreshToken())
                 .ifPresent(refreshTokenRepository::delete);
         // ifPresent: if token doesn't exist we do nothing (idempotent logout)
+    }
+
+    @Transactional
+    public String forgetPassword(ForgetPasswordRequest request) {
+        User user = userRepository.findByEmail(request.getEmail())
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with email: " + request.getEmail()));
+
+        String token = UUID.randomUUID().toString();
+        user.setResetToken(token);
+        user.setResetTokenExpiresAt(Instant.now().plusSeconds(3600)); // 1 hour expiry
+        userRepository.save(user);
+
+        // In a real app, send this token via email.
+        return token;
+    }
+
+    @Transactional
+    public void resetPassword(ResetPasswordRequest request) {
+        User user = userRepository.findByResetToken(request.getToken())
+                .orElseThrow(() -> new UnauthorizedException("Invalid or expired reset token"));
+
+        if (user.getResetTokenExpiresAt().isBefore(Instant.now())) {
+            user.setResetToken(null);
+            user.setResetTokenExpiresAt(null);
+            userRepository.save(user);
+            throw new UnauthorizedException("Reset token has expired");
+        }
+
+        user.setPassword(passwordEncoder.encode(request.getNewPassword()));
+        user.setResetToken(null);
+        user.setResetTokenExpiresAt(null);
+        userRepository.save(user);
     }
 }

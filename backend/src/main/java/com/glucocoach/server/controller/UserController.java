@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.glucocoach.server.domain.User;
+import com.glucocoach.server.dto.request.ChangePasswordRequest;
 import com.glucocoach.server.dto.request.UserRequest;
 import com.glucocoach.server.dto.response.UserResponse;
 import com.glucocoach.server.service.UserService;
@@ -54,6 +55,16 @@ public class UserController {
     @DeleteMapping("/me")
     public ResponseEntity<Void> deleteMe(@AuthenticationPrincipal User currentUser) {
         userService.deleteMe(currentUser.getEmail());
+        return ResponseEntity.noContent().build();
+    }
+
+    // ── PUT /api/users/change-password ───────────────────────────────────────
+    // Changes the password for the authenticated user
+    @PutMapping("/change-password")
+    public ResponseEntity<Void> changePassword(
+            @AuthenticationPrincipal User currentUser,
+            @Valid @RequestBody ChangePasswordRequest request) {
+        userService.changePassword(currentUser.getEmail(), request);
         return ResponseEntity.noContent().build();
     }
 }

@@ -7,9 +7,11 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.glucocoach.server.dto.request.ForgetPasswordRequest;
 import com.glucocoach.server.dto.request.LoginRequest;
 import com.glucocoach.server.dto.request.RefreshRequest;
 import com.glucocoach.server.dto.request.RegisterRequest;
+import com.glucocoach.server.dto.request.ResetPasswordRequest;
 import com.glucocoach.server.dto.response.AuthResponse;
 import com.glucocoach.server.service.AuthService;
 
@@ -65,5 +67,21 @@ public class AuthController {
     public ResponseEntity<Void> logout(@Valid @RequestBody RefreshRequest request) {
         authService.logout(request);
         return ResponseEntity.noContent().build();
+    }
+
+    // ── POST /api/auth/forget-password ────────────────────────────────────────
+    // Public endpoint — sends (returns) a reset token to the user's email
+    @PostMapping("/forget-password")
+    public ResponseEntity<String> forgetPassword(@Valid @RequestBody ForgetPasswordRequest request) {
+        String token = authService.forgetPassword(request);
+        return ResponseEntity.ok("Reset token: " + token);
+    }
+
+    // ── POST /api/auth/reset-password ─────────────────────────────────────────
+    // Public endpoint — resets the password using the token
+    @PostMapping("/reset-password")
+    public ResponseEntity<String> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
+        authService.resetPassword(request);
+        return ResponseEntity.ok("Password reset successfully");
     }
 }

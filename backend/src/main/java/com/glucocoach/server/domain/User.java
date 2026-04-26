@@ -59,6 +59,9 @@ public class User implements UserDetails {
 
     String password;
 
+    private String resetToken;
+    private java.time.Instant resetTokenExpiresAt;
+
     @OneToOne(mappedBy = "user", cascade = CascadeType.ALL)
     private Profile profile;
 
