@@ -51,6 +51,8 @@ public class LlmMealAnalysisService {
                                     Map.of("type", "image",
                                             "source", Map.of(
                                                     "type", "base64",
+                                                    // Hardcoded to JPEG — MealImageController always writes .jpg before calling this method.
+                                                    // To support PNG/WebP, accept a mimeType parameter here and pass it from the controller.
                                                     "media_type", "image/jpeg",
                                                     "data", base64Image)),
                                     Map.of("type", "text", "text", PROMPT)
@@ -67,7 +69,11 @@ public class LlmMealAnalysisService {
             String responseBody = restTemplate.postForObject(ANTHROPIC_URL, entity, String.class);
 
             JsonNode root = objectMapper.readTree(responseBody);
-            String rawText = root.path("content").get(0).path("text").asText();
+            JsonNode contentArray = root.path("content");
+            if (contentArray.isEmpty()) {
+                throw new MealAnalysisException("Anthropic response missing content array: " + responseBody);
+            }
+            String rawText = contentArray.get(0).path("text").asText();
 
             // Strip markdown fences the LLM occasionally adds despite prompt instructions
             String jsonText = rawText.replaceAll("(?s)```json\\s*|```\\s*", "").trim();
