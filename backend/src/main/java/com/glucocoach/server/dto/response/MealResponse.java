@@ -10,7 +10,6 @@ public class MealResponse {
     private Double carbs;
     private LocalDateTime timestamp;
     private Long userId;
-    private String imageUrl;
-    private String analysisResult;
+    private MealAnalysisResult analysis;   // null until image is uploaded and analyzed
     private Double estimatedCarbs;
 }

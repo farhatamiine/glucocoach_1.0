@@ -53,9 +53,6 @@ services:
       - database
     ports:
       - "8080:8080"
-    working_dir: /app
-    volumes:
-      - ./uploads:/app/uploads
     environment:
       - SPRING_APPLICATION_NAME=SERVER
       - SPRING_DATASOURCE_URL=jdbc:postgresql://database:5432/glucocoach

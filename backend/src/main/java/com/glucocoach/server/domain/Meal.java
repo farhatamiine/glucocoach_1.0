@@ -36,9 +36,6 @@ public class Meal {
 
     private LocalDateTime timestamp;
 
-    @Column(nullable = true)
-    private String imageUrl;            // local file path set by MealImageController
-
     @Column(nullable = true, length = 2000)
     private String analysisResult;      // raw JSON from LLM — never reinterpreted in the app layer
 

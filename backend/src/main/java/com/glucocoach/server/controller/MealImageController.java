@@ -1,5 +1,6 @@
 package com.glucocoach.server.controller;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.glucocoach.server.domain.Meal;
 import com.glucocoach.server.domain.User;
@@ -17,14 +18,10 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.UUID;
 
 @Slf4j
 @RestController
@@ -66,44 +63,23 @@ public class MealImageController {
             throw new RuntimeException("Failed to read uploaded file", e);
         }
 
-        // Save to uploads/meals/{userId}/{uuid}.jpg (relative to working dir)
-        // In Docker: working_dir=/app → resolves to /app/uploads/meals/... matching the volume mount
-        Path dir = Paths.get("uploads", "meals", user.getId().toString());
-        Path filePath;
-        try {
-            Files.createDirectories(dir);
-            filePath = dir.resolve(UUID.randomUUID() + ".jpg");
-            Files.write(filePath, fileBytes);
-        } catch (IOException e) {
-            throw new RuntimeException("Failed to store meal image file", e);
-        }
+        // Image bytes are used only for analysis — not persisted to disk or object storage.
+        MealAnalysisResult result = llmMealAnalysisService.analyze(fileBytes);
 
         try {
-            // imageUrl stores the local file path (not a URL) — for internal reference only.
-            // If a public URL is needed, add a static resource mapping and store /uploads/... here.
-            meal.setImageUrl(filePath.toString());
-
-            MealAnalysisResult result = llmMealAnalysisService.analyze(fileBytes);
-
             meal.setAnalysisResult(objectMapper.writeValueAsString(result));
-            meal.setEstimatedCarbs(result.estimatedCarbs());
-            if (!StringUtils.hasText(meal.getName())) {
-                meal.setName(result.name());
-            }
-
-            Meal saved = mealRepository.save(meal);
-            log.info("Meal {} image uploaded and analyzed: estimatedCarbs={}, confidence={}",
-                    id, result.estimatedCarbs(), result.confidence());
-
-            return ResponseEntity.ok(mealMapper.toResponse(saved));
-        } catch (Exception e) {
-            // File was written — clean up the orphan before re-throwing
-            try {
-                Files.deleteIfExists(filePath);
-            } catch (IOException deleteEx) {
-                log.warn("Failed to clean up orphaned upload {}: {}", filePath, deleteEx.getMessage());
-            }
-            throw (e instanceof RuntimeException re) ? re : new RuntimeException(e);
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException("Failed to serialize analysis result", e);
         }
+        meal.setEstimatedCarbs(result.estimatedCarbs());
+        if (!StringUtils.hasText(meal.getName())) {
+            meal.setName(result.name());
+        }
+
+        Meal saved = mealRepository.save(meal);
+        log.info("Meal {} analyzed: estimatedCarbs={}, confidence={}",
+                id, result.estimatedCarbs(), result.confidence());
+
+        return ResponseEntity.ok(mealMapper.toResponse(saved));
     }
 }
