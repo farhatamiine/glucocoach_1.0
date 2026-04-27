@@ -9,6 +9,7 @@ import com.glucocoach.server.repository.AlertHistoryRepository;
 import com.glucocoach.server.repository.AlertRepository;
 import com.glucocoach.server.service.FcmService;
 import com.glucocoach.server.service.NightScoutService;
+import com.glucocoach.server.service.UserService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -28,6 +29,7 @@ public class GlucoseAlertScheduler {
     private final NightScoutService nightScoutService;
     private final FcmService fcmService;
     private final AlertHistoryRepository alertHistoryRepository;
+    private final UserService userService;
 
     @Scheduled(fixedRateString = "${app.alert.check-interval-ms:60000}")
     public void checkGlucoseAlerts() {
@@ -88,7 +90,13 @@ public class GlucoseAlertScheduler {
 
             NotifyVia notifyVia = alert.getNotifyVia();
             switch (notifyVia) {
-                case PUSH  -> fcmService.sendPush(user.getFcmToken(), title, body);
+                case PUSH -> {
+                    boolean tokenValid = fcmService.sendPush(user.getFcmToken(), title, body);
+                    if (!tokenValid) {
+                        log.info("Clearing stale FCM token for user {}", user.getId());
+                        userService.clearFcmToken(user.getId());
+                    }
+                }
                 case EMAIL -> log.info("EMAIL not yet implemented — user {}", user.getId());
                 case SMS   -> log.info("SMS not yet implemented — user {}", user.getId());
             }

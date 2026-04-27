@@ -10,6 +10,7 @@ import com.glucocoach.server.repository.AlertHistoryRepository;
 import com.glucocoach.server.repository.AlertRepository;
 import com.glucocoach.server.service.FcmService;
 import com.glucocoach.server.service.NightScoutService;
+import com.glucocoach.server.service.UserService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -31,6 +32,7 @@ class GlucoseAlertSchedulerTest {
     @Mock private NightScoutService nightScoutService;
     @Mock private FcmService fcmService;
     @Mock private AlertHistoryRepository alertHistoryRepository;
+    @Mock private UserService userService;
 
     @InjectMocks
     private GlucoseAlertScheduler scheduler;
@@ -63,6 +65,7 @@ class GlucoseAlertSchedulerTest {
 
         when(alertRepository.findByActiveTrue()).thenReturn(List.of(alert));
         when(nightScoutService.getEntries(1)).thenReturn(List.of(entry));
+        when(fcmService.sendPush(eq("device-fcm-token"), eq("GlucoCoach Alert"), contains("Low glucose: 60"))).thenReturn(true);
 
         scheduler.checkGlucoseAlerts();
 
@@ -90,6 +93,7 @@ class GlucoseAlertSchedulerTest {
 
         when(alertRepository.findByActiveTrue()).thenReturn(List.of(alert));
         when(nightScoutService.getEntries(1)).thenReturn(List.of(entry));
+        when(fcmService.sendPush(eq("device-fcm-token"), eq("GlucoCoach Alert"), contains("High glucose: 220"))).thenReturn(true);
 
         scheduler.checkGlucoseAlerts();
 
@@ -133,6 +137,7 @@ class GlucoseAlertSchedulerTest {
 
         when(alertRepository.findByActiveTrue()).thenReturn(List.of(alertNoToken));
         when(nightScoutService.getEntries(1)).thenReturn(List.of(entry));
+        when(fcmService.sendPush(isNull(), eq("GlucoCoach Alert"), contains("Low glucose"))).thenReturn(true);
 
         scheduler.checkGlucoseAlerts();
 
@@ -149,5 +154,20 @@ class GlucoseAlertSchedulerTest {
 
         verify(fcmService, never()).sendPush(any(), any(), any());
         verify(alertHistoryRepository, never()).save(any());
+    }
+
+    @Test
+    void checkGlucoseAlerts_shouldClearFcmToken_whenSendPushReturnsFalse() {
+        NightscoutEntryDTO entry = new NightscoutEntryDTO();
+        entry.setSgv(60);
+
+        when(alertRepository.findByActiveTrue()).thenReturn(List.of(alert));
+        when(nightScoutService.getEntries(1)).thenReturn(List.of(entry));
+        when(fcmService.sendPush(eq("device-fcm-token"), eq("GlucoCoach Alert"), contains("Low glucose: 60"))).thenReturn(false);
+
+        scheduler.checkGlucoseAlerts();
+
+        verify(userService).clearFcmToken(user.getId());
+        verify(alertHistoryRepository).save(any(AlertHistory.class));
     }
 }

@@ -85,4 +85,13 @@ public class UserService {
         user.setFcmToken(fcmToken);
         userRepository.save(user);
     }
+
+    @Transactional
+    public void clearFcmToken(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "User not found with id: " + userId));
+        user.setFcmToken(null);
+        userRepository.save(user);
+    }
 }

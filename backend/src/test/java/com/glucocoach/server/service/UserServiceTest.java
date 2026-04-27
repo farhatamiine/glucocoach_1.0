@@ -237,4 +237,28 @@ class UserServiceTest {
 
         verify(userRepository, never()).save(any());
     }
+
+    // ── clearFcmToken ─────────────────────────────────────────────────────────
+
+    @Test
+    void clearFcmToken_shouldNullifyTokenAndSave_whenUserExists() {
+        user.setFcmToken("stale-token");
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+
+        userService.clearFcmToken(1L);
+
+        assertThat(user.getFcmToken()).isNull();
+        verify(userRepository).save(user);
+    }
+
+    @Test
+    void clearFcmToken_shouldThrowResourceNotFoundException_whenUserDoesNotExist() {
+        when(userRepository.findById(99L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> userService.clearFcmToken(99L))
+                .isInstanceOf(ResourceNotFoundException.class)
+                .hasMessageContaining("99");
+
+        verify(userRepository, never()).save(any());
+    }
 }
