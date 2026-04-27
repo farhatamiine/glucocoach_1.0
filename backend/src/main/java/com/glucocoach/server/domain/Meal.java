@@ -2,6 +2,7 @@ package com.glucocoach.server.domain;
 
 import java.time.LocalDateTime;
 
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
@@ -34,6 +35,12 @@ public class Meal {
     private Double carbs;
 
     private LocalDateTime timestamp;
+
+    @Column(nullable = true, length = 2000)
+    private String analysisResult;      // raw JSON from LLM — never reinterpreted in the app layer
+
+    @Column(nullable = true)
+    private Double estimatedCarbs;      // LLM estimate — separate from user-confirmed carbs
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)

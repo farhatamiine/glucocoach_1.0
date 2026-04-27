@@ -4,6 +4,7 @@ import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
 
+import com.glucocoach.server.exception.MealAnalysisException;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
@@ -12,12 +13,14 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.context.request.WebRequest;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
 
 // ResponseEntityExceptionHandler already handles many Spring MVC exceptions internally.
 // For exceptions it already owns (like MethodArgumentNotValidException), we must
 // OVERRIDE its protected method — NOT add a new @ExceptionHandler for the same type.
 // Adding a second @ExceptionHandler causes the "Ambiguous handler" startup crash.
+@Slf4j
 @ControllerAdvice
 public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 
@@ -82,6 +85,20 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
                                 .details(request.getDescription(false).replace("uri=", ""))
                                 .build();
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(error);
+        }
+
+        @ExceptionHandler(MealAnalysisException.class)
+        public ResponseEntity<ErrorResponse> handleMealAnalysisException(
+                        MealAnalysisException ex, WebRequest request) {
+                log.error("Meal image analysis failed", ex);
+                ErrorResponse error = ErrorResponse.builder()
+                                .status(HttpStatus.BAD_GATEWAY.value())
+                                .timestamp(Instant.now())
+                                .error("Meal Analysis Failed")
+                                .message("Meal image analysis failed")
+                                .details(request.getDescription(false).replace("uri=", ""))
+                                .build();
+                return ResponseEntity.status(HttpStatus.BAD_GATEWAY).body(error);
         }
 
         // ResponseEntityExceptionHandler already "owns" MethodArgumentNotValidException.

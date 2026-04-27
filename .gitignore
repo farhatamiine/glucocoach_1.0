@@ -95,3 +95,7 @@ application-prod.properties
 application-prod.yml
 application-local.properties
 application-local.yml
+
+application.properties
+*.env
+uploads/
