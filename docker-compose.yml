@@ -39,7 +39,8 @@ services:
       - MONGO_CONNECTION=mongodb://cgmuser:cgmpassword@mongodb:27017/nightscout?authSource=admin
       - MONGODB_URI=mongodb://cgmuser:cgmpassword@mongodb:27017/nightscout?authSource=admin
       - INSECURE_USE_HTTP=true
-      - ENABLE=careportal iob cob basal boluscalc cage sage treatmentnotify cors dbsize
+      - ENABLE=careportal iob cob basal boluscalc cage sage treatmentnotify cors
+        dbsize
       - API_SECRET=48f875fa-0e03-416f-b9d6-19c9afc4e197
 
   api:
@@ -53,6 +54,8 @@ services:
       - database
     ports:
       - "8080:8080"
+    volumes:
+      - ./uploads:/app/uploads
     environment:
       - SPRING_APPLICATION_NAME=SERVER
       - SPRING_DATASOURCE_URL=jdbc:postgresql://database:5432/glucocoach
@@ -70,7 +73,9 @@ services:
       #      - /host/path/to/service-account.json:/run/secrets/firebase.json:ro
       # 2. Point the env var at the mounted path:
       #      FIREBASE_CREDENTIALS_PATH=/run/secrets/firebase.json
-      - FIREBASE_CREDENTIALS_PATH=
+      - FIREBASE_CREDENTIALS_PATH=${FIREBASE_CREDENTIALS_PATH}
+      - NIGHTSCOUT_URL=http://nightscout:1337
+      - NIGHTSCOUT_API_SECRET=48f875fa-0e03-416f-b9d6-19c9afc4e197
       # LLM meal-image analysis (Anthropic).
       # Set to your Anthropic API key to enable the /api/meals/{id}/analyze endpoint:
       #      LLM_API_KEY=sk-ant-...
@@ -80,6 +85,7 @@ services:
 
 volumes:
   db-data:
+  uploads:
   mongot:
   db:
   configdb:
