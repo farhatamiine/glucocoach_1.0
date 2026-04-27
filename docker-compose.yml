@@ -65,8 +65,18 @@ services:
       - JWT_SECRET=glucocoach-super-secret-key-must-be-at-least-32-characters-long!
       - JWT_EXPIRATION=86400000
       - JWT_REFRESH-EXPIRATION=604800000
+      # Firebase Cloud Messaging (push alerts).
+      # 1. Bind-mount your service-account JSON into the container (add to the volumes block below):
+      #      - /host/path/to/service-account.json:/run/secrets/firebase.json:ro
+      # 2. Point the env var at the mounted path:
+      #      FIREBASE_CREDENTIALS_PATH=/run/secrets/firebase.json
       - FIREBASE_CREDENTIALS_PATH=
+      # LLM meal-image analysis (Anthropic).
+      # Set to your Anthropic API key to enable the /api/meals/{id}/analyze endpoint:
+      #      LLM_API_KEY=sk-ant-...
       - LLM_API_KEY=
+      # volumes:                                     # uncomment and fill in when enabling Firebase
+      #   - /host/path/to/service-account.json:/run/secrets/firebase.json:ro
 
 volumes:
   db-data:

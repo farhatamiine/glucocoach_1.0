@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.glucocoach.server.dto.response.MealAnalysisResult;
 import com.glucocoach.server.exception.MealAnalysisException;
+import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -11,6 +12,7 @@ import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 import org.springframework.web.client.RestTemplate;
 
 import java.util.Base64;
@@ -31,6 +33,14 @@ public class LlmMealAnalysisService {
     @Value("${app.llm.model:claude-opus-4-5}")
     private String model;
 
+    @PostConstruct
+    void validateConfig() {
+        if (!StringUtils.hasText(apiKey)) {
+            log.warn("app.llm.api-key is not configured — meal image analysis will be unavailable. " +
+                     "Set the LLM_API_KEY environment variable to enable it.");
+        }
+    }
+
     private static final String ANTHROPIC_URL     = "https://api.anthropic.com/v1/messages";
     private static final String ANTHROPIC_VERSION = "2023-06-01";
     private static final String PROMPT =
@@ -39,6 +49,9 @@ public class LlmMealAnalysisService {
             "confidence(low|medium|high)";
 
     public MealAnalysisResult analyze(byte[] imageBytes) {
+        if (!StringUtils.hasText(apiKey)) {
+            throw new MealAnalysisException("Meal image analysis is not configured — set LLM_API_KEY");
+        }
         try {
             String base64Image = Base64.getEncoder().encodeToString(imageBytes);
 
