@@ -66,10 +66,16 @@ public class GlucoseAlertScheduler {
         // A save failure for alert N will log + skip N but commits for 1..N-1 survive.
         // Add @Transactional here only if all-or-nothing semantics are required.
         for (Alert alert : alerts) {
+            Double low = alert.getThresholdLow();
+            Double high = alert.getThresholdHigh();
+            if (low == null && high == null) {
+                continue;   // no thresholds configured — skip
+            }
+
             AlertDirection direction;
-            if (sgv < alert.getThresholdLow()) {
+            if (low != null && sgv < low) {
                 direction = AlertDirection.LOW;
-            } else if (sgv > alert.getThresholdHigh()) {
+            } else if (high != null && sgv > high) {
                 direction = AlertDirection.HIGH;
             } else {
                 continue;   // in range — no alert, no history
@@ -77,8 +83,8 @@ public class GlucoseAlertScheduler {
 
             String title = "GlucoCoach Alert";
             String body = direction == AlertDirection.LOW
-                    ? "Low glucose: " + (int) sgv + " mg/dL (threshold: " + alert.getThresholdLow() + ")"
-                    : "High glucose: " + (int) sgv + " mg/dL (threshold: " + alert.getThresholdHigh() + ")";
+                    ? "Low glucose: " + (int) sgv + " mg/dL (threshold: " + low + ")"
+                    : "High glucose: " + (int) sgv + " mg/dL (threshold: " + high + ")";
 
             NotifyVia notifyVia = alert.getNotifyVia();
             switch (notifyVia) {
