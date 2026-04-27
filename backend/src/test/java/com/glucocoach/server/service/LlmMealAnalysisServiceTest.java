@@ -66,7 +66,7 @@ class LlmMealAnalysisServiceTest {
 
         assertThatThrownBy(() -> service.analyze("fake-image".getBytes()))
                 .isInstanceOf(MealAnalysisException.class)
-                .hasMessageContaining("Failed to analyze meal image");
+                .hasMessageContaining("Meal image analysis failed");
     }
 
     @Test
@@ -87,6 +87,6 @@ class LlmMealAnalysisServiceTest {
 
         assertThatThrownBy(() -> service.analyze("fake-image".getBytes()))
                 .isInstanceOf(MealAnalysisException.class)
-                .hasMessageContaining("Failed to analyze meal image");
+                .hasMessageContaining("Meal image analysis failed");
     }
 }

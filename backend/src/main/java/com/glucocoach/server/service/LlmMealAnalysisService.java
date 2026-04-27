@@ -71,7 +71,8 @@ public class LlmMealAnalysisService {
             JsonNode root = objectMapper.readTree(responseBody);
             JsonNode contentArray = root.path("content");
             if (contentArray.isEmpty()) {
-                throw new MealAnalysisException("Anthropic response missing content array: " + responseBody);
+                log.error("Anthropic response missing content array. Response body: {}", responseBody);
+                throw new MealAnalysisException("Meal image analysis failed");
             }
             String rawText = contentArray.get(0).path("text").asText();
 
@@ -83,8 +84,11 @@ public class LlmMealAnalysisService {
                     result.name(), result.estimatedCarbs(), result.confidence());
             return result;
 
+        } catch (MealAnalysisException e) {
+            throw e;  // already sanitized — don't re-wrap
         } catch (Exception e) {
-            throw new MealAnalysisException("Failed to analyze meal image: " + e.getMessage(), e);
+            log.error("Meal image analysis failed", e);
+            throw new MealAnalysisException("Meal image analysis failed", e);
         }
     }
 }
