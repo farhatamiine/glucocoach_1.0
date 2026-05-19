@@ -77,11 +77,11 @@ mobile/web-build/
 mobile/.metro-health-check*
 
 ### Flutter (uncomment if using Flutter) ###
-# mobile/.dart_tool/
-# mobile/.flutter-plugins
-# mobile/.flutter-plugins-dependencies
-# mobile/build/
-# mobile/*.g.dart
+mobile/.dart_tool/
+mobile/.flutter-plugins
+mobile/.flutter-plugins-dependencies
+mobile/build/
+mobile/*.g.dart
 
 # ===========================
 # Secrets (IMPORTANT)
@@ -98,4 +98,4 @@ application-local.yml
 
 application.properties
 *.env
-uploads/
+uploads/mobile/android/app/google-services.json

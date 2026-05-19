@@ -19,7 +19,9 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.*;
@@ -56,6 +58,8 @@ class GlucoseAlertSchedulerTest {
                 .active(true)
                 .user(user)
                 .build();
+
+        scheduler.setCooldownMinutes(15);
     }
 
     @Test
@@ -65,6 +69,9 @@ class GlucoseAlertSchedulerTest {
 
         when(alertRepository.findByActiveTrue()).thenReturn(List.of(alert));
         when(nightScoutService.getEntries(1)).thenReturn(List.of(entry));
+        when(alertHistoryRepository.findTopByUserIdAndAlertIdAndDirectionOrderByTriggeredAtDesc(
+                eq(user.getId()), eq(alert.getId()), eq(AlertDirection.LOW)))
+                .thenReturn(Optional.empty());
         when(fcmService.sendPush(eq("device-fcm-token"), eq("GlucoCoach Alert"), contains("Low glucose: 60"))).thenReturn(true);
 
         scheduler.checkGlucoseAlerts();
@@ -93,6 +100,9 @@ class GlucoseAlertSchedulerTest {
 
         when(alertRepository.findByActiveTrue()).thenReturn(List.of(alert));
         when(nightScoutService.getEntries(1)).thenReturn(List.of(entry));
+        when(alertHistoryRepository.findTopByUserIdAndAlertIdAndDirectionOrderByTriggeredAtDesc(
+                eq(user.getId()), eq(alert.getId()), eq(AlertDirection.HIGH)))
+                .thenReturn(Optional.empty());
         when(fcmService.sendPush(eq("device-fcm-token"), eq("GlucoCoach Alert"), contains("High glucose: 220"))).thenReturn(true);
 
         scheduler.checkGlucoseAlerts();
@@ -137,6 +147,9 @@ class GlucoseAlertSchedulerTest {
 
         when(alertRepository.findByActiveTrue()).thenReturn(List.of(alertNoToken));
         when(nightScoutService.getEntries(1)).thenReturn(List.of(entry));
+        when(alertHistoryRepository.findTopByUserIdAndAlertIdAndDirectionOrderByTriggeredAtDesc(
+                eq(userNoToken.getId()), eq(alertNoToken.getId()), eq(AlertDirection.LOW)))
+                .thenReturn(Optional.empty());
         when(fcmService.sendPush(isNull(), eq("GlucoCoach Alert"), contains("Low glucose"))).thenReturn(true);
 
         scheduler.checkGlucoseAlerts();
@@ -163,11 +176,92 @@ class GlucoseAlertSchedulerTest {
 
         when(alertRepository.findByActiveTrue()).thenReturn(List.of(alert));
         when(nightScoutService.getEntries(1)).thenReturn(List.of(entry));
+        when(alertHistoryRepository.findTopByUserIdAndAlertIdAndDirectionOrderByTriggeredAtDesc(
+                eq(user.getId()), eq(alert.getId()), eq(AlertDirection.LOW)))
+                .thenReturn(Optional.empty());
         when(fcmService.sendPush(eq("device-fcm-token"), eq("GlucoCoach Alert"), contains("Low glucose: 60"))).thenReturn(false);
 
         scheduler.checkGlucoseAlerts();
 
         verify(userService).clearFcmToken(user.getId());
+        verify(alertHistoryRepository).save(any(AlertHistory.class));
+    }
+
+    @Test
+    void checkGlucoseAlerts_shouldNotFire_whenOnCooldown() {
+        NightscoutEntryDTO entry = new NightscoutEntryDTO();
+        entry.setSgv(60);
+
+        AlertHistory recentHistory = AlertHistory.builder()
+                .id(100L)
+                .triggeredAt(LocalDateTime.now().minusMinutes(5))
+                .direction(AlertDirection.LOW)
+                .alertId(alert.getId())
+                .user(user)
+                .build();
+
+        when(alertRepository.findByActiveTrue()).thenReturn(List.of(alert));
+        when(nightScoutService.getEntries(1)).thenReturn(List.of(entry));
+        when(alertHistoryRepository.findTopByUserIdAndAlertIdAndDirectionOrderByTriggeredAtDesc(
+                eq(user.getId()), eq(alert.getId()), eq(AlertDirection.LOW)))
+                .thenReturn(Optional.of(recentHistory));
+
+        scheduler.checkGlucoseAlerts();
+
+        verify(fcmService, never()).sendPush(any(), any(), any());
+        verify(alertHistoryRepository, never()).save(any(AlertHistory.class));
+    }
+
+    @Test
+    void checkGlucoseAlerts_shouldFire_whenCooldownExpired() {
+        NightscoutEntryDTO entry = new NightscoutEntryDTO();
+        entry.setSgv(60);
+
+        AlertHistory oldHistory = AlertHistory.builder()
+                .id(100L)
+                .triggeredAt(LocalDateTime.now().minusMinutes(20))
+                .direction(AlertDirection.LOW)
+                .alertId(alert.getId())
+                .user(user)
+                .build();
+
+        when(alertRepository.findByActiveTrue()).thenReturn(List.of(alert));
+        when(nightScoutService.getEntries(1)).thenReturn(List.of(entry));
+        when(alertHistoryRepository.findTopByUserIdAndAlertIdAndDirectionOrderByTriggeredAtDesc(
+                eq(user.getId()), eq(alert.getId()), eq(AlertDirection.LOW)))
+                .thenReturn(Optional.of(oldHistory));
+        when(fcmService.sendPush(any(), eq("GlucoCoach Alert"), contains("Low glucose: 60"))).thenReturn(true);
+
+        scheduler.checkGlucoseAlerts();
+
+        verify(fcmService).sendPush(any(), eq("GlucoCoach Alert"), contains("Low glucose: 60"));
+        verify(alertHistoryRepository).save(any(AlertHistory.class));
+    }
+
+    @Test
+    void checkGlucoseAlerts_shouldFireForOppositeDirection_evenWhenOtherDirectionOnCooldown() {
+        NightscoutEntryDTO entry = new NightscoutEntryDTO();
+        entry.setSgv(220);
+
+        AlertHistory recentLowHistory = AlertHistory.builder()
+                .id(100L)
+                .triggeredAt(LocalDateTime.now().minusMinutes(5))
+                .direction(AlertDirection.LOW)
+                .alertId(alert.getId())
+                .user(user)
+                .build();
+
+        when(alertRepository.findByActiveTrue()).thenReturn(List.of(alert));
+        when(nightScoutService.getEntries(1)).thenReturn(List.of(entry));
+        // LOW direction is on cooldown, but glucose is HIGH so scheduler checks HIGH direction
+        when(alertHistoryRepository.findTopByUserIdAndAlertIdAndDirectionOrderByTriggeredAtDesc(
+                eq(user.getId()), eq(alert.getId()), eq(AlertDirection.HIGH)))
+                .thenReturn(Optional.empty());
+        when(fcmService.sendPush(any(), eq("GlucoCoach Alert"), contains("High glucose: 220"))).thenReturn(true);
+
+        scheduler.checkGlucoseAlerts();
+
+        verify(fcmService).sendPush(any(), eq("GlucoCoach Alert"), contains("High glucose: 220"));
         verify(alertHistoryRepository).save(any(AlertHistory.class));
     }
 }

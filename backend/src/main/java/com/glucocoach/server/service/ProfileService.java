@@ -11,7 +11,6 @@ import com.glucocoach.server.exception.AlreadyExistsException;
 import com.glucocoach.server.exception.ResourceNotFoundException;
 import com.glucocoach.server.mapper.ProfileMapper;
 import com.glucocoach.server.repository.ProfileRepository;
-import com.glucocoach.server.repository.UserRepository;
 
 import lombok.RequiredArgsConstructor;
 
@@ -20,14 +19,14 @@ import lombok.RequiredArgsConstructor;
 public class ProfileService {
 
     private final ProfileRepository profileRepository;
-    private final UserRepository userRepository;
+    private final OwnershipValidator ownershipValidator;
     private final ProfileMapper profileMapper;
 
     // ── CREATE ────────────────────────────────────────────────────────────────
     // Profile is 1-to-1 with User — only one profile allowed per user
     @Transactional
     public ProfileResponse create(String email, ProfileRequest request) {
-        User user = getUser(email);
+        User user = ownershipValidator.getCurrentUser(email);
 
         if (profileRepository.existsByUserId(user.getId())) {
             throw new AlreadyExistsException("Profile already exists for this user. Use PUT to update it.");
@@ -41,7 +40,7 @@ public class ProfileService {
 
     // ── GET ───────────────────────────────────────────────────────────────────
     public ProfileResponse get(String email) {
-        User user = getUser(email);
+        User user = ownershipValidator.getCurrentUser(email);
 
         Profile profile = profileRepository.findByUserId(user.getId())
                 .orElseThrow(() -> new ResourceNotFoundException(
@@ -53,7 +52,7 @@ public class ProfileService {
     // ── UPDATE ────────────────────────────────────────────────────────────────
     @Transactional
     public ProfileResponse update(String email, ProfileRequest request) {
-        User user = getUser(email);
+        User user = ownershipValidator.getCurrentUser(email);
 
         Profile profile = profileRepository.findByUserId(user.getId())
                 .orElseThrow(() -> new ResourceNotFoundException(
@@ -68,11 +67,5 @@ public class ProfileService {
         profile.setPrescribedBasalDose(request.getPrescribedBasalDose());
 
         return profileMapper.toResponse(profileRepository.save(profile));
-    }
-
-    // ── HELPER ────────────────────────────────────────────────────────────────
-    private User getUser(String email) {
-        return userRepository.findByEmail(email)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
     }
 }

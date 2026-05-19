@@ -3,6 +3,7 @@ package com.glucocoach.server.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -10,7 +11,6 @@ import static org.mockito.Mockito.when;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Optional;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -26,7 +26,6 @@ import com.glucocoach.server.dto.response.BasalResponse;
 import com.glucocoach.server.exception.ResourceNotFoundException;
 import com.glucocoach.server.mapper.BasalMapper;
 import com.glucocoach.server.repository.BasalRepository;
-import com.glucocoach.server.repository.UserRepository;
 
 @ExtendWith(MockitoExtension.class)
 public class BasalServiceTest {
@@ -35,7 +34,7 @@ public class BasalServiceTest {
     private BasalRepository basalRepository;
 
     @Mock
-    private UserRepository userRepository;
+    private OwnershipValidator ownershipValidator;
 
     @Mock
     private BasalMapper basalMapper;
@@ -80,7 +79,7 @@ public class BasalServiceTest {
     @Test
     void getAll_shouldReturnListOfBasalResponses() {
         // Arrange
-        when(userRepository.findByEmail(userEmail)).thenReturn(Optional.of(user));
+        when(ownershipValidator.getCurrentUser(userEmail)).thenReturn(user);
         when(basalRepository.findByUserIdOrderByInjectedAtDesc(user.getId())).thenReturn(List.of(basal));
         when(basalMapper.toResponse(basal)).thenReturn(basalResponse);
 
@@ -96,7 +95,7 @@ public class BasalServiceTest {
     @Test
     void create_shouldSaveAndReturnBasalResponse() {
         // Arrange
-        when(userRepository.findByEmail(userEmail)).thenReturn(Optional.of(user));
+        when(ownershipValidator.getCurrentUser(userEmail)).thenReturn(user);
         when(basalMapper.toEntity(basalRequest)).thenReturn(basal);
         when(basalRepository.save(any(Basal.class))).thenReturn(basal);
         when(basalMapper.toResponse(basal)).thenReturn(basalResponse);
@@ -114,8 +113,8 @@ public class BasalServiceTest {
     void delete_shouldRemoveBasal_whenExists() {
         // Arrange
         Long basalId = 1L;
-        when(userRepository.findByEmail(userEmail)).thenReturn(Optional.of(user));
-        when(basalRepository.findByIdAndUserId(basalId, user.getId())).thenReturn(Optional.of(basal));
+        when(ownershipValidator.getCurrentUser(userEmail)).thenReturn(user);
+        when(ownershipValidator.validateOwnership(eq(basalId), eq(user.getId()), any(), eq("Basal entry"))).thenReturn(basal);
 
         // Act
         basalService.delete(basalId, userEmail);
@@ -128,8 +127,8 @@ public class BasalServiceTest {
     void delete_shouldThrowException_whenDoesNotExist() {
         // Arrange
         Long basalId = 99L;
-        when(userRepository.findByEmail(userEmail)).thenReturn(Optional.of(user));
-        when(basalRepository.findByIdAndUserId(basalId, user.getId())).thenReturn(Optional.empty());
+        when(ownershipValidator.getCurrentUser(userEmail)).thenReturn(user);
+        when(ownershipValidator.validateOwnership(eq(basalId), eq(user.getId()), any(), eq("Basal entry"))).thenThrow(new ResourceNotFoundException("Basal entry not found with id: " + basalId));
 
         // Act & Assert
         assertThatThrownBy(() -> basalService.delete(basalId, userEmail))

@@ -3,6 +3,7 @@ package com.glucocoach.server.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -29,7 +30,6 @@ import com.glucocoach.server.exception.ResourceNotFoundException;
 import com.glucocoach.server.mapper.BolusMapper;
 import com.glucocoach.server.repository.BolusRepository;
 import com.glucocoach.server.repository.MealRepository;
-import com.glucocoach.server.repository.UserRepository;
 
 @ExtendWith(MockitoExtension.class)
 public class BolusServiceTest {
@@ -41,7 +41,7 @@ public class BolusServiceTest {
     private MealRepository mealRepository;
 
     @Mock
-    private UserRepository userRepository;
+    private OwnershipValidator ownershipValidator;
 
     @Mock
     private BolusMapper bolusMapper;
@@ -89,7 +89,7 @@ public class BolusServiceTest {
     @Test
     void getAll_shouldReturnListOfBolusResponses() {
         // Arrange
-        when(userRepository.findByEmail(userEmail)).thenReturn(Optional.of(user));
+        when(ownershipValidator.getCurrentUser(userEmail)).thenReturn(user);
         when(bolusRepository.findByUserIdOrderByTimestampDesc(user.getId())).thenReturn(List.of(bolus));
         when(bolusMapper.toResponse(bolus)).thenReturn(bolusResponse);
 
@@ -105,7 +105,7 @@ public class BolusServiceTest {
     @Test
     void create_shouldSaveAndReturnBolusResponse_whenNoMealId() {
         // Arrange
-        when(userRepository.findByEmail(userEmail)).thenReturn(Optional.of(user));
+        when(ownershipValidator.getCurrentUser(userEmail)).thenReturn(user);
         when(bolusMapper.toEntity(bolusRequest)).thenReturn(bolus);
         when(bolusRepository.save(any(Bolus.class))).thenReturn(bolus);
         when(bolusMapper.toResponse(bolus)).thenReturn(bolusResponse);
@@ -129,7 +129,7 @@ public class BolusServiceTest {
         
         Meal meal = Meal.builder().id(mealId).user(user).build();
         
-        when(userRepository.findByEmail(userEmail)).thenReturn(Optional.of(user));
+        when(ownershipValidator.getCurrentUser(userEmail)).thenReturn(user);
         when(bolusMapper.toEntity(bolusRequest)).thenReturn(bolus);
         when(mealRepository.findByIdAndUserId(mealId, user.getId())).thenReturn(Optional.of(meal));
         when(bolusRepository.save(any(Bolus.class))).thenReturn(bolus);
@@ -149,7 +149,7 @@ public class BolusServiceTest {
         Long mealId = 99L;
         bolusRequest.setMealId(mealId);
         
-        when(userRepository.findByEmail(userEmail)).thenReturn(Optional.of(user));
+        when(ownershipValidator.getCurrentUser(userEmail)).thenReturn(user);
         when(bolusMapper.toEntity(bolusRequest)).thenReturn(bolus);
         when(mealRepository.findByIdAndUserId(mealId, user.getId())).thenReturn(Optional.empty());
 
@@ -165,8 +165,8 @@ public class BolusServiceTest {
     void delete_shouldRemoveBolus_whenExists() {
         // Arrange
         Long bolusId = 1L;
-        when(userRepository.findByEmail(userEmail)).thenReturn(Optional.of(user));
-        when(bolusRepository.findByIdAndUserId(bolusId, user.getId())).thenReturn(Optional.of(bolus));
+        when(ownershipValidator.getCurrentUser(userEmail)).thenReturn(user);
+        when(ownershipValidator.validateOwnership(eq(bolusId), eq(user.getId()), any(), eq("Bolus entry"))).thenReturn(bolus);
 
         // Act
         bolusService.delete(bolusId, userEmail);
@@ -179,8 +179,8 @@ public class BolusServiceTest {
     void delete_shouldThrowException_whenDoesNotExist() {
         // Arrange
         Long bolusId = 99L;
-        when(userRepository.findByEmail(userEmail)).thenReturn(Optional.of(user));
-        when(bolusRepository.findByIdAndUserId(bolusId, user.getId())).thenReturn(Optional.empty());
+        when(ownershipValidator.getCurrentUser(userEmail)).thenReturn(user);
+        when(ownershipValidator.validateOwnership(eq(bolusId), eq(user.getId()), any(), eq("Bolus entry"))).thenThrow(new ResourceNotFoundException("Bolus entry not found with id: " + bolusId));
 
         // Act & Assert
         assertThatThrownBy(() -> bolusService.delete(bolusId, userEmail))

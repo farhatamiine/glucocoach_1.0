@@ -26,7 +26,6 @@ import com.glucocoach.server.exception.AlreadyExistsException;
 import com.glucocoach.server.exception.ResourceNotFoundException;
 import com.glucocoach.server.mapper.ProfileMapper;
 import com.glucocoach.server.repository.ProfileRepository;
-import com.glucocoach.server.repository.UserRepository;
 
 @ExtendWith(MockitoExtension.class)
 public class ProfileServiceTest {
@@ -35,7 +34,7 @@ public class ProfileServiceTest {
     private ProfileRepository profileRepository;
 
     @Mock
-    private UserRepository userRepository;
+    private OwnershipValidator ownershipValidator;
 
     @Mock
     private ProfileMapper profileMapper;
@@ -81,7 +80,7 @@ public class ProfileServiceTest {
     @Test
     void create_shouldSaveProfile_whenNoneExists() {
         // Arrange
-        when(userRepository.findByEmail(userEmail)).thenReturn(Optional.of(user));
+        when(ownershipValidator.getCurrentUser(userEmail)).thenReturn(user);
         when(profileRepository.existsByUserId(user.getId())).thenReturn(false);
         when(profileMapper.toEntity(profileRequest)).thenReturn(profile);
         when(profileRepository.save(any(Profile.class))).thenReturn(profile);
@@ -99,7 +98,7 @@ public class ProfileServiceTest {
     @Test
     void create_shouldThrowException_whenProfileAlreadyExists() {
         // Arrange
-        when(userRepository.findByEmail(userEmail)).thenReturn(Optional.of(user));
+        when(ownershipValidator.getCurrentUser(userEmail)).thenReturn(user);
         when(profileRepository.existsByUserId(user.getId())).thenReturn(true);
 
         // Act & Assert
@@ -111,7 +110,7 @@ public class ProfileServiceTest {
     @Test
     void get_shouldReturnProfile_whenExists() {
         // Arrange
-        when(userRepository.findByEmail(userEmail)).thenReturn(Optional.of(user));
+        when(ownershipValidator.getCurrentUser(userEmail)).thenReturn(user);
         when(profileRepository.findByUserId(user.getId())).thenReturn(Optional.of(profile));
         when(profileMapper.toResponse(profile)).thenReturn(profileResponse);
 
@@ -127,7 +126,7 @@ public class ProfileServiceTest {
     @Test
     void get_shouldThrowException_whenNotFound() {
         // Arrange
-        when(userRepository.findByEmail(userEmail)).thenReturn(Optional.of(user));
+        when(ownershipValidator.getCurrentUser(userEmail)).thenReturn(user);
         when(profileRepository.findByUserId(user.getId())).thenReturn(Optional.empty());
 
         // Act & Assert
@@ -138,7 +137,7 @@ public class ProfileServiceTest {
     @Test
     void update_shouldUpdateExistingProfile() {
         // Arrange
-        when(userRepository.findByEmail(userEmail)).thenReturn(Optional.of(user));
+        when(ownershipValidator.getCurrentUser(userEmail)).thenReturn(user);
         when(profileRepository.findByUserId(user.getId())).thenReturn(Optional.of(profile));
         when(profileRepository.save(any(Profile.class))).thenReturn(profile);
         when(profileMapper.toResponse(profile)).thenReturn(profileResponse);

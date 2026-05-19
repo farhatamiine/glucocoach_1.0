@@ -3,13 +3,13 @@ package com.glucocoach.server.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.time.LocalDate;
 import java.util.List;
-import java.util.Optional;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -25,7 +25,6 @@ import com.glucocoach.server.dto.response.LaboAnalysisResponse;
 import com.glucocoach.server.exception.ResourceNotFoundException;
 import com.glucocoach.server.mapper.LaboAnalysisMapper;
 import com.glucocoach.server.repository.LaboAnalysisRepository;
-import com.glucocoach.server.repository.UserRepository;
 
 @ExtendWith(MockitoExtension.class)
 public class LaboAnalysisServiceTest {
@@ -34,7 +33,7 @@ public class LaboAnalysisServiceTest {
     private LaboAnalysisRepository laboAnalysisRepository;
 
     @Mock
-    private UserRepository userRepository;
+    private OwnershipValidator ownershipValidator;
 
     @Mock
     private LaboAnalysisMapper laboAnalysisMapper;
@@ -85,7 +84,7 @@ public class LaboAnalysisServiceTest {
     @Test
     void getAll_shouldReturnListOfLaboResponses() {
         // Arrange
-        when(userRepository.findByEmail(userEmail)).thenReturn(Optional.of(user));
+        when(ownershipValidator.getCurrentUser(userEmail)).thenReturn(user);
         when(laboAnalysisRepository.findByUserIdOrderByDateDesc(user.getId())).thenReturn(List.of(labo));
         when(laboAnalysisMapper.toResponse(labo)).thenReturn(laboResponse);
 
@@ -101,7 +100,7 @@ public class LaboAnalysisServiceTest {
     @Test
     void create_shouldSaveAndReturnLaboResponse() {
         // Arrange
-        when(userRepository.findByEmail(userEmail)).thenReturn(Optional.of(user));
+        when(ownershipValidator.getCurrentUser(userEmail)).thenReturn(user);
         when(laboAnalysisMapper.toEntity(laboRequest)).thenReturn(labo);
         when(laboAnalysisRepository.save(any(LaboAnalysis.class))).thenReturn(labo);
         when(laboAnalysisMapper.toResponse(labo)).thenReturn(laboResponse);
@@ -127,8 +126,8 @@ public class LaboAnalysisServiceTest {
         updatedResponse.setId(laboId);
         updatedResponse.setHba1c(7.0);
 
-        when(userRepository.findByEmail(userEmail)).thenReturn(Optional.of(user));
-        when(laboAnalysisRepository.findByIdAndUserId(laboId, user.getId())).thenReturn(Optional.of(labo));
+        when(ownershipValidator.getCurrentUser(userEmail)).thenReturn(user);
+        when(ownershipValidator.validateOwnership(eq(laboId), eq(user.getId()), any(), eq("Lab analysis"))).thenReturn(labo);
         when(laboAnalysisRepository.save(any(LaboAnalysis.class))).thenReturn(labo);
         when(laboAnalysisMapper.toResponse(labo)).thenReturn(updatedResponse);
 
@@ -145,8 +144,8 @@ public class LaboAnalysisServiceTest {
     void delete_shouldRemoveLabo_whenExists() {
         // Arrange
         Long laboId = 1L;
-        when(userRepository.findByEmail(userEmail)).thenReturn(Optional.of(user));
-        when(laboAnalysisRepository.findByIdAndUserId(laboId, user.getId())).thenReturn(Optional.of(labo));
+        when(ownershipValidator.getCurrentUser(userEmail)).thenReturn(user);
+        when(ownershipValidator.validateOwnership(eq(laboId), eq(user.getId()), any(), eq("Lab analysis"))).thenReturn(labo);
 
         // Act
         laboAnalysisService.delete(laboId, userEmail);
@@ -159,8 +158,8 @@ public class LaboAnalysisServiceTest {
     void delete_shouldThrowException_whenDoesNotExist() {
         // Arrange
         Long laboId = 99L;
-        when(userRepository.findByEmail(userEmail)).thenReturn(Optional.of(user));
-        when(laboAnalysisRepository.findByIdAndUserId(laboId, user.getId())).thenReturn(Optional.empty());
+        when(ownershipValidator.getCurrentUser(userEmail)).thenReturn(user);
+        when(ownershipValidator.validateOwnership(eq(laboId), eq(user.getId()), any(), eq("Lab analysis"))).thenThrow(new ResourceNotFoundException("Lab analysis not found with id: " + laboId));
 
         // Act & Assert
         assertThatThrownBy(() -> laboAnalysisService.delete(laboId, userEmail))

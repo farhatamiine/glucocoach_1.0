@@ -3,6 +3,7 @@ package com.glucocoach.server.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -26,7 +27,6 @@ import com.glucocoach.server.dto.response.MealResponse;
 import com.glucocoach.server.exception.ResourceNotFoundException;
 import com.glucocoach.server.mapper.MealMapper;
 import com.glucocoach.server.repository.MealRepository;
-import com.glucocoach.server.repository.UserRepository;
 
 @ExtendWith(MockitoExtension.class)
 public class MealServiceTest {
@@ -35,7 +35,7 @@ public class MealServiceTest {
     private MealRepository mealRepository;
 
     @Mock
-    private UserRepository userRepository;
+    private OwnershipValidator ownershipValidator;
 
     @Mock
     private MealMapper mealMapper;
@@ -83,7 +83,7 @@ public class MealServiceTest {
     @Test
     void getAll_shouldReturnListOfMealResponses() {
         // Arrange
-        when(userRepository.findByEmail(userEmail)).thenReturn(Optional.of(user));
+        when(ownershipValidator.getCurrentUser(userEmail)).thenReturn(user);
         when(mealRepository.findByUserIdOrderByTimestampDesc(user.getId())).thenReturn(List.of(meal));
         when(mealMapper.toResponse(meal)).thenReturn(mealResponse);
 
@@ -93,7 +93,7 @@ public class MealServiceTest {
         // Assert
         assertThat(result).hasSize(1);
         assertThat(result.get(0).getName()).isEqualTo("CheeseCake");
-        verify(userRepository).findByEmail(userEmail);
+        verify(ownershipValidator).getCurrentUser(userEmail);
         verify(mealRepository).findByUserIdOrderByTimestampDesc(user.getId());
     }
 
@@ -101,8 +101,8 @@ public class MealServiceTest {
     void getById_shouldReturnMealResponse_whenMealExists() {
         // Arrange
         Long mealId = 1L;
-        when(userRepository.findByEmail(userEmail)).thenReturn(Optional.of(user));
-        when(mealRepository.findByIdAndUserId(mealId, user.getId())).thenReturn(Optional.of(meal));
+        when(ownershipValidator.getCurrentUser(userEmail)).thenReturn(user);
+        when(ownershipValidator.validateOwnership(eq(mealId), eq(user.getId()), any(), eq("Meal"))).thenReturn(meal);
         when(mealMapper.toResponse(meal)).thenReturn(mealResponse);
 
         // Act
@@ -111,15 +111,15 @@ public class MealServiceTest {
         // Assert
         assertThat(result).isNotNull();
         assertThat(result.getId()).isEqualTo(mealId);
-        verify(mealRepository).findByIdAndUserId(mealId, user.getId());
+
     }
 
     @Test
     void getById_shouldThrowException_whenMealDoesNotExist() {
         // Arrange
         Long mealId = 99L;
-        when(userRepository.findByEmail(userEmail)).thenReturn(Optional.of(user));
-        when(mealRepository.findByIdAndUserId(mealId, user.getId())).thenReturn(Optional.empty());
+        when(ownershipValidator.getCurrentUser(userEmail)).thenReturn(user);
+        when(ownershipValidator.validateOwnership(eq(mealId), eq(user.getId()), any(), eq("Meal"))).thenThrow(new ResourceNotFoundException("Meal not found with id: " + mealId));
 
         // Act & Assert
         assertThatThrownBy(() -> mealService.getById(mealId, userEmail))
@@ -130,7 +130,7 @@ public class MealServiceTest {
     @Test
     void create_shouldSaveAndReturnMealResponse() {
         // Arrange
-        when(userRepository.findByEmail(userEmail)).thenReturn(Optional.of(user));
+        when(ownershipValidator.getCurrentUser(userEmail)).thenReturn(user);
         when(mealMapper.toEntity(mealRequest)).thenReturn(meal);
         when(mealRepository.save(any(Meal.class))).thenReturn(meal);
         when(mealMapper.toResponse(meal)).thenReturn(mealResponse);
@@ -158,8 +158,8 @@ public class MealServiceTest {
         updatedResponse.setName("Updated Meal");
         updatedResponse.setCarbs(30.0);
 
-        when(userRepository.findByEmail(userEmail)).thenReturn(Optional.of(user));
-        when(mealRepository.findByIdAndUserId(mealId, user.getId())).thenReturn(Optional.of(meal));
+        when(ownershipValidator.getCurrentUser(userEmail)).thenReturn(user);
+        when(ownershipValidator.validateOwnership(eq(mealId), eq(user.getId()), any(), eq("Meal"))).thenReturn(meal);
         when(mealRepository.save(any(Meal.class))).thenReturn(meal);
         when(mealMapper.toResponse(meal)).thenReturn(updatedResponse);
 
@@ -176,8 +176,8 @@ public class MealServiceTest {
     void delete_shouldRemoveMeal_whenMealExists() {
         // Arrange
         Long mealId = 1L;
-        when(userRepository.findByEmail(userEmail)).thenReturn(Optional.of(user));
-        when(mealRepository.findByIdAndUserId(mealId, user.getId())).thenReturn(Optional.of(meal));
+        when(ownershipValidator.getCurrentUser(userEmail)).thenReturn(user);
+        when(ownershipValidator.validateOwnership(eq(mealId), eq(user.getId()), any(), eq("Meal"))).thenReturn(meal);
 
         // Act
         mealService.delete(mealId, userEmail);
@@ -190,8 +190,8 @@ public class MealServiceTest {
     void delete_shouldThrowException_whenMealDoesNotExist() {
         // Arrange
         Long mealId = 99L;
-        when(userRepository.findByEmail(userEmail)).thenReturn(Optional.of(user));
-        when(mealRepository.findByIdAndUserId(mealId, user.getId())).thenReturn(Optional.empty());
+        when(ownershipValidator.getCurrentUser(userEmail)).thenReturn(user);
+        when(ownershipValidator.validateOwnership(eq(mealId), eq(user.getId()), any(), eq("Meal"))).thenThrow(new ResourceNotFoundException("Meal not found with id: " + mealId));
 
         // Act & Assert
         assertThatThrownBy(() -> mealService.delete(mealId, userEmail))
@@ -202,7 +202,7 @@ public class MealServiceTest {
     @Test
     void getUser_shouldThrowException_whenUserNotFound() {
         // Arrange
-        when(userRepository.findByEmail(userEmail)).thenReturn(Optional.empty());
+        when(ownershipValidator.getCurrentUser(userEmail)).thenThrow(new ResourceNotFoundException("User not found"));
 
         // Act & Assert
         assertThatThrownBy(() -> mealService.getAll(userEmail))

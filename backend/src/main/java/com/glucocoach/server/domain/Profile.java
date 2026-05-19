@@ -25,7 +25,7 @@ import lombok.ToString;
 @ToString
 @Entity
 @Table(name = "Profile")
-public class Profile {
+public class Profile implements OwnedEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     Long id;

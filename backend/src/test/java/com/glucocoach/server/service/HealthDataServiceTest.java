@@ -3,13 +3,13 @@ package com.glucocoach.server.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.time.LocalDate;
 import java.util.List;
-import java.util.Optional;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -25,7 +25,6 @@ import com.glucocoach.server.dto.response.HealthDataResponse;
 import com.glucocoach.server.exception.ResourceNotFoundException;
 import com.glucocoach.server.mapper.HealthDataMapper;
 import com.glucocoach.server.repository.HealthDataRepository;
-import com.glucocoach.server.repository.UserRepository;
 
 @ExtendWith(MockitoExtension.class)
 public class HealthDataServiceTest {
@@ -34,7 +33,7 @@ public class HealthDataServiceTest {
     private HealthDataRepository healthDataRepository;
 
     @Mock
-    private UserRepository userRepository;
+    private OwnershipValidator ownershipValidator;
 
     @Mock
     private HealthDataMapper healthDataMapper;
@@ -85,7 +84,7 @@ public class HealthDataServiceTest {
     @Test
     void getAll_shouldReturnListOfHealthDataResponses() {
         // Arrange
-        when(userRepository.findByEmail(userEmail)).thenReturn(Optional.of(user));
+        when(ownershipValidator.getCurrentUser(userEmail)).thenReturn(user);
         when(healthDataRepository.findByUserIdOrderByDateDesc(user.getId())).thenReturn(List.of(healthData));
         when(healthDataMapper.toResponse(healthData)).thenReturn(healthDataResponse);
 
@@ -101,7 +100,7 @@ public class HealthDataServiceTest {
     @Test
     void create_shouldSaveAndReturnHealthDataResponse() {
         // Arrange
-        when(userRepository.findByEmail(userEmail)).thenReturn(Optional.of(user));
+        when(ownershipValidator.getCurrentUser(userEmail)).thenReturn(user);
         when(healthDataMapper.toEntity(healthDataRequest)).thenReturn(healthData);
         when(healthDataRepository.save(any(HealthData.class))).thenReturn(healthData);
         when(healthDataMapper.toResponse(healthData)).thenReturn(healthDataResponse);
@@ -119,8 +118,8 @@ public class HealthDataServiceTest {
     void delete_shouldRemoveHealthData_whenExists() {
         // Arrange
         Long dataId = 1L;
-        when(userRepository.findByEmail(userEmail)).thenReturn(Optional.of(user));
-        when(healthDataRepository.findByIdAndUserId(dataId, user.getId())).thenReturn(Optional.of(healthData));
+        when(ownershipValidator.getCurrentUser(userEmail)).thenReturn(user);
+        when(ownershipValidator.validateOwnership(eq(dataId), eq(user.getId()), any(), eq("Health data"))).thenReturn(healthData);
 
         // Act
         healthDataService.delete(dataId, userEmail);
@@ -133,8 +132,8 @@ public class HealthDataServiceTest {
     void delete_shouldThrowException_whenDoesNotExist() {
         // Arrange
         Long dataId = 99L;
-        when(userRepository.findByEmail(userEmail)).thenReturn(Optional.of(user));
-        when(healthDataRepository.findByIdAndUserId(dataId, user.getId())).thenReturn(Optional.empty());
+        when(ownershipValidator.getCurrentUser(userEmail)).thenReturn(user);
+        when(ownershipValidator.validateOwnership(eq(dataId), eq(user.getId()), any(), eq("Health data"))).thenThrow(new ResourceNotFoundException("Health data not found with id: " + dataId));
 
         // Act & Assert
         assertThatThrownBy(() -> healthDataService.delete(dataId, userEmail))

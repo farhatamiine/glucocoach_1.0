@@ -9,10 +9,8 @@ import com.glucocoach.server.domain.Basal;
 import com.glucocoach.server.domain.User;
 import com.glucocoach.server.dto.request.BasalRequest;
 import com.glucocoach.server.dto.response.BasalResponse;
-import com.glucocoach.server.exception.ResourceNotFoundException;
 import com.glucocoach.server.mapper.BasalMapper;
 import com.glucocoach.server.repository.BasalRepository;
-import com.glucocoach.server.repository.UserRepository;
 
 import lombok.RequiredArgsConstructor;
 
@@ -21,11 +19,11 @@ import lombok.RequiredArgsConstructor;
 public class BasalService {
 
     private final BasalRepository basalRepository;
-    private final UserRepository userRepository;
+    private final OwnershipValidator ownershipValidator;
     private final BasalMapper basalMapper;
 
     public List<BasalResponse> getAll(String email) {
-        User user = getUser(email);
+        User user = ownershipValidator.getCurrentUser(email);
         return basalRepository.findByUserIdOrderByInjectedAtDesc(user.getId())
                 .stream()
                 .map(basalMapper::toResponse)
@@ -34,7 +32,7 @@ public class BasalService {
 
     @Transactional
     public BasalResponse create(BasalRequest request, String email) {
-        User user = getUser(email);
+        User user = ownershipValidator.getCurrentUser(email);
         Basal basal = basalMapper.toEntity(request);
         basal.setUser(user);
         return basalMapper.toResponse(basalRepository.save(basal));
@@ -42,14 +40,9 @@ public class BasalService {
 
     @Transactional
     public void delete(Long id, String email) {
-        User user = getUser(email);
-        Basal basal = basalRepository.findByIdAndUserId(id, user.getId())
-                .orElseThrow(() -> new ResourceNotFoundException("Basal entry not found with id: " + id));
+        User user = ownershipValidator.getCurrentUser(email);
+        Basal basal = ownershipValidator.validateOwnership(
+                id, user.getId(), basalRepository::findByIdAndUserId, "Basal entry");
         basalRepository.delete(basal);
-    }
-
-    private User getUser(String email) {
-        return userRepository.findByEmail(email)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
     }
 }

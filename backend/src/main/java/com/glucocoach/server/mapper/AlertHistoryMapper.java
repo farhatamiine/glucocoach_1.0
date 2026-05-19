@@ -15,6 +15,8 @@ public class AlertHistoryMapper {
         response.setTriggeredAt(alertHistory.getTriggeredAt());
         response.setGlucoseValue(alertHistory.getGlucoseValue());
         response.setMessage(alertHistory.getMessage());
+        response.setDirection(alertHistory.getDirection());
+        response.setNotifyVia(alertHistory.getNotifyVia());
         response.setUserId(alertHistory.getUser().getId());
         return response;
     }

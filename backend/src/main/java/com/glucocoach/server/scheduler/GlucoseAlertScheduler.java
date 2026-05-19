@@ -12,6 +12,7 @@ import com.glucocoach.server.service.NightScoutService;
 import com.glucocoach.server.service.UserService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
@@ -30,6 +31,14 @@ public class GlucoseAlertScheduler {
     private final FcmService fcmService;
     private final AlertHistoryRepository alertHistoryRepository;
     private final UserService userService;
+
+    @Value("${app.alert.cooldown-minutes:15}")
+    private long cooldownMinutes;
+
+    // Package-private setter for tests
+    void setCooldownMinutes(long cooldownMinutes) {
+        this.cooldownMinutes = cooldownMinutes;
+    }
 
     @Scheduled(fixedRateString = "${app.alert.check-interval-ms:60000}")
     public void checkGlucoseAlerts() {
@@ -64,9 +73,6 @@ public class GlucoseAlertScheduler {
         }
         double sgv = rawSgv;
 
-        // Best-effort: each AlertHistory save runs in its own implicit transaction.
-        // A save failure for alert N will log + skip N but commits for 1..N-1 survive.
-        // Add @Transactional here only if all-or-nothing semantics are required.
         for (Alert alert : alerts) {
             Double low = alert.getThresholdLow();
             Double high = alert.getThresholdHigh();
@@ -81,6 +87,11 @@ public class GlucoseAlertScheduler {
                 direction = AlertDirection.HIGH;
             } else {
                 continue;   // in range — no alert, no history
+            }
+
+            if (isOnCooldown(user, alert, direction)) {
+                log.debug("Alert {} for user {} is on cooldown (direction={})", alert.getId(), user.getId(), direction);
+                continue;
             }
 
             String title = "GlucoCoach Alert";
@@ -111,5 +122,19 @@ public class GlucoseAlertScheduler {
                     .user(user)
                     .build());
         }
+    }
+
+    private boolean isOnCooldown(User user, Alert alert, AlertDirection direction) {
+        return alertHistoryRepository
+                .findTopByUserIdAndAlertIdAndDirectionOrderByTriggeredAtDesc(user.getId(), alert.getId(), direction)
+                .map(lastHistory -> {
+                    LocalDateTime cooldownEnd = lastHistory.getTriggeredAt().plusMinutes(cooldownMinutes);
+                    boolean onCooldown = LocalDateTime.now().isBefore(cooldownEnd);
+                    if (onCooldown) {
+                        log.debug("Cooldown active for alert {} until {}", alert.getId(), cooldownEnd);
+                    }
+                    return onCooldown;
+                })
+                .orElse(false);
     }
 }

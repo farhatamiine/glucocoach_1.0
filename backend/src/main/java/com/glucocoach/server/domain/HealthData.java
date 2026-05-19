@@ -23,7 +23,7 @@ import lombok.ToString;
 @ToString(exclude = "user")
 @Entity
 @Table(name = "health_data")
-public class HealthData {
+public class HealthData implements OwnedEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

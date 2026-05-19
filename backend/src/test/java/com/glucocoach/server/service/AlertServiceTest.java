@@ -3,13 +3,13 @@ package com.glucocoach.server.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.time.LocalDate;
 import java.util.List;
-import java.util.Optional;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -26,7 +26,6 @@ import com.glucocoach.server.dto.response.AlertResponse;
 import com.glucocoach.server.exception.ResourceNotFoundException;
 import com.glucocoach.server.mapper.AlertMapper;
 import com.glucocoach.server.repository.AlertRepository;
-import com.glucocoach.server.repository.UserRepository;
 
 @ExtendWith(MockitoExtension.class)
 public class AlertServiceTest {
@@ -35,7 +34,7 @@ public class AlertServiceTest {
     private AlertRepository alertRepository;
 
     @Mock
-    private UserRepository userRepository;
+    private OwnershipValidator ownershipValidator;
 
     @Mock
     private AlertMapper alertMapper;
@@ -86,7 +85,7 @@ public class AlertServiceTest {
     @Test
     void getAll_shouldReturnListOfAlertResponses() {
         // Arrange
-        when(userRepository.findByEmail(userEmail)).thenReturn(Optional.of(user));
+        when(ownershipValidator.getCurrentUser(userEmail)).thenReturn(user);
         when(alertRepository.findByUserId(user.getId())).thenReturn(List.of(alert));
         when(alertMapper.toResponse(alert)).thenReturn(alertResponse);
 
@@ -102,7 +101,7 @@ public class AlertServiceTest {
     @Test
     void create_shouldSaveAndReturnAlertResponse() {
         // Arrange
-        when(userRepository.findByEmail(userEmail)).thenReturn(Optional.of(user));
+        when(ownershipValidator.getCurrentUser(userEmail)).thenReturn(user);
         when(alertMapper.toEntity(alertRequest)).thenReturn(alert);
         when(alertRepository.save(any(Alert.class))).thenReturn(alert);
         when(alertMapper.toResponse(alert)).thenReturn(alertResponse);
@@ -131,8 +130,8 @@ public class AlertServiceTest {
         updatedResponse.setThresholdLow(80.0);
         updatedResponse.setThresholdHigh(200.0);
 
-        when(userRepository.findByEmail(userEmail)).thenReturn(Optional.of(user));
-        when(alertRepository.findByIdAndUserId(alertId, user.getId())).thenReturn(Optional.of(alert));
+        when(ownershipValidator.getCurrentUser(userEmail)).thenReturn(user);
+        when(ownershipValidator.validateOwnership(eq(alertId), eq(user.getId()), any(), eq("Alert"))).thenReturn(alert);
         when(alertRepository.save(any(Alert.class))).thenReturn(alert);
         when(alertMapper.toResponse(alert)).thenReturn(updatedResponse);
 
@@ -149,8 +148,8 @@ public class AlertServiceTest {
     void update_shouldThrowException_whenAlertDoesNotExist() {
         // Arrange
         Long alertId = 99L;
-        when(userRepository.findByEmail(userEmail)).thenReturn(Optional.of(user));
-        when(alertRepository.findByIdAndUserId(alertId, user.getId())).thenReturn(Optional.empty());
+        when(ownershipValidator.getCurrentUser(userEmail)).thenReturn(user);
+        when(ownershipValidator.validateOwnership(eq(alertId), eq(user.getId()), any(), eq("Alert"))).thenThrow(new ResourceNotFoundException("Alert not found with id: " + alertId));
 
         // Act & Assert
         assertThatThrownBy(() -> alertService.update(alertId, alertRequest, userEmail))
@@ -161,8 +160,8 @@ public class AlertServiceTest {
     void delete_shouldRemoveAlert_whenAlertExists() {
         // Arrange
         Long alertId = 1L;
-        when(userRepository.findByEmail(userEmail)).thenReturn(Optional.of(user));
-        when(alertRepository.findByIdAndUserId(alertId, user.getId())).thenReturn(Optional.of(alert));
+        when(ownershipValidator.getCurrentUser(userEmail)).thenReturn(user);
+        when(ownershipValidator.validateOwnership(eq(alertId), eq(user.getId()), any(), eq("Alert"))).thenReturn(alert);
 
         // Act
         alertService.delete(alertId, userEmail);
@@ -175,8 +174,8 @@ public class AlertServiceTest {
     void delete_shouldThrowException_whenAlertDoesNotExist() {
         // Arrange
         Long alertId = 99L;
-        when(userRepository.findByEmail(userEmail)).thenReturn(Optional.of(user));
-        when(alertRepository.findByIdAndUserId(alertId, user.getId())).thenReturn(Optional.empty());
+        when(ownershipValidator.getCurrentUser(userEmail)).thenReturn(user);
+        when(ownershipValidator.validateOwnership(eq(alertId), eq(user.getId()), any(), eq("Alert"))).thenThrow(new ResourceNotFoundException("Alert not found with id: " + alertId));
 
         // Act & Assert
         assertThatThrownBy(() -> alertService.delete(alertId, userEmail))

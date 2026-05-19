@@ -3,6 +3,7 @@ package com.glucocoach.server.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -87,7 +88,12 @@ public class AuthServiceTest {
         assertThat(result.getAccessToken()).isEqualTo("access_token");
         assertThat(result.getRefreshToken()).isEqualTo("refresh_token");
         verify(userRepository).save(any(User.class));
-        verify(refreshTokenRepository).save(any(RefreshToken.class));
+        // Refresh token must be hashed (SHA-256) before storage — never store raw
+        verify(refreshTokenRepository).save(argThat(rt ->
+                rt.getToken() != null
+                && !rt.getToken().equals("refresh_token")
+                && rt.getToken().equals(sha256Hex("refresh_token"))
+        ));
     }
 
     @Test
@@ -122,7 +128,11 @@ public class AuthServiceTest {
         // Assert
         assertThat(result.getAccessToken()).isEqualTo("access_token");
         verify(refreshTokenRepository).deleteByUser(user);
-        verify(refreshTokenRepository).save(any(RefreshToken.class));
+        verify(refreshTokenRepository).save(argThat(rt ->
+                rt.getToken() != null
+                && !rt.getToken().equals("refresh_token")
+                && rt.getToken().equals(sha256Hex("refresh_token"))
+        ));
     }
 
     @Test
@@ -144,16 +154,17 @@ public class AuthServiceTest {
     void refresh_shouldReturnNewTokens_whenTokenValid() {
         // Arrange
         String oldRefreshToken = "old_token";
+        String oldRefreshTokenHash = sha256Hex(oldRefreshToken);
         RefreshRequest request = new RefreshRequest();
         request.setRefreshToken(oldRefreshToken);
 
         RefreshToken storedToken = RefreshToken.builder()
-                .token(oldRefreshToken)
+                .token(oldRefreshTokenHash)
                 .expiresAt(Instant.now().plusSeconds(3600))
                 .user(user)
                 .build();
 
-        when(refreshTokenRepository.findByToken(oldRefreshToken)).thenReturn(Optional.of(storedToken));
+        when(refreshTokenRepository.findByToken(oldRefreshTokenHash)).thenReturn(Optional.of(storedToken));
         when(jwtService.generateToken(email)).thenReturn("new_access");
         when(jwtService.generateRefreshToken(email)).thenReturn("new_refresh");
 
@@ -163,23 +174,27 @@ public class AuthServiceTest {
         // Assert
         assertThat(result.getAccessToken()).isEqualTo("new_access");
         verify(refreshTokenRepository).delete(storedToken);
-        verify(refreshTokenRepository).save(any(RefreshToken.class));
+        verify(refreshTokenRepository).save(argThat(rt ->
+                rt.getToken() != null
+                && rt.getToken().equals(sha256Hex("new_refresh"))
+        ));
     }
 
     @Test
     void refresh_shouldThrowException_whenTokenExpired() {
         // Arrange
         String oldRefreshToken = "expired_token";
+        String oldRefreshTokenHash = sha256Hex(oldRefreshToken);
         RefreshRequest request = new RefreshRequest();
         request.setRefreshToken(oldRefreshToken);
 
         RefreshToken expiredToken = RefreshToken.builder()
-                .token(oldRefreshToken)
+                .token(oldRefreshTokenHash)
                 .expiresAt(Instant.now().minusSeconds(3600))
                 .user(user)
                 .build();
 
-        when(refreshTokenRepository.findByToken(oldRefreshToken)).thenReturn(Optional.of(expiredToken));
+        when(refreshTokenRepository.findByToken(oldRefreshTokenHash)).thenReturn(Optional.of(expiredToken));
 
         // Act & Assert
         assertThatThrownBy(() -> authService.refresh(request))
@@ -192,11 +207,12 @@ public class AuthServiceTest {
     void logout_shouldDeleteToken_whenFound() {
         // Arrange
         String token = "logout_token";
+        String tokenHash = sha256Hex(token);
         RefreshRequest request = new RefreshRequest();
         request.setRefreshToken(token);
-        RefreshToken refreshToken = RefreshToken.builder().token(token).build();
+        RefreshToken refreshToken = RefreshToken.builder().token(tokenHash).build();
 
-        when(refreshTokenRepository.findByToken(token)).thenReturn(Optional.of(refreshToken));
+        when(refreshTokenRepository.findByToken(tokenHash)).thenReturn(Optional.of(refreshToken));
 
         // Act
         authService.logout(request);
