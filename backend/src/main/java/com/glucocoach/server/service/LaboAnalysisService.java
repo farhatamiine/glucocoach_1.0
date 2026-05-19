@@ -9,10 +9,8 @@ import com.glucocoach.server.domain.LaboAnalysis;
 import com.glucocoach.server.domain.User;
 import com.glucocoach.server.dto.request.LaboAnalysisRequest;
 import com.glucocoach.server.dto.response.LaboAnalysisResponse;
-import com.glucocoach.server.exception.ResourceNotFoundException;
 import com.glucocoach.server.mapper.LaboAnalysisMapper;
 import com.glucocoach.server.repository.LaboAnalysisRepository;
-import com.glucocoach.server.repository.UserRepository;
 
 import lombok.RequiredArgsConstructor;
 
@@ -21,11 +19,11 @@ import lombok.RequiredArgsConstructor;
 public class LaboAnalysisService {
 
     private final LaboAnalysisRepository laboAnalysisRepository;
-    private final UserRepository userRepository;
+    private final OwnershipValidator ownershipValidator;
     private final LaboAnalysisMapper laboAnalysisMapper;
 
     public List<LaboAnalysisResponse> getAll(String email) {
-        User user = getUser(email);
+        User user = ownershipValidator.getCurrentUser(email);
         return laboAnalysisRepository.findByUserIdOrderByDateDesc(user.getId())
                 .stream()
                 .map(laboAnalysisMapper::toResponse)
@@ -34,7 +32,7 @@ public class LaboAnalysisService {
 
     @Transactional
     public LaboAnalysisResponse create(LaboAnalysisRequest request, String email) {
-        User user = getUser(email);
+        User user = ownershipValidator.getCurrentUser(email);
         LaboAnalysis labo = laboAnalysisMapper.toEntity(request);
         labo.setUser(user);
         return laboAnalysisMapper.toResponse(laboAnalysisRepository.save(labo));
@@ -42,9 +40,9 @@ public class LaboAnalysisService {
 
     @Transactional
     public LaboAnalysisResponse update(Long id, LaboAnalysisRequest request, String email) {
-        User user = getUser(email);
-        LaboAnalysis labo = laboAnalysisRepository.findByIdAndUserId(id, user.getId())
-                .orElseThrow(() -> new ResourceNotFoundException("Lab analysis not found with id: " + id));
+        User user = ownershipValidator.getCurrentUser(email);
+        LaboAnalysis labo = ownershipValidator.validateOwnership(
+                id, user.getId(), laboAnalysisRepository::findByIdAndUserId, "Lab analysis");
 
         labo.setHba1c(request.getHba1c());
         labo.setCholesterol(request.getCholesterol());
@@ -56,14 +54,9 @@ public class LaboAnalysisService {
 
     @Transactional
     public void delete(Long id, String email) {
-        User user = getUser(email);
-        LaboAnalysis labo = laboAnalysisRepository.findByIdAndUserId(id, user.getId())
-                .orElseThrow(() -> new ResourceNotFoundException("Lab analysis not found with id: " + id));
+        User user = ownershipValidator.getCurrentUser(email);
+        LaboAnalysis labo = ownershipValidator.validateOwnership(
+                id, user.getId(), laboAnalysisRepository::findByIdAndUserId, "Lab analysis");
         laboAnalysisRepository.delete(labo);
-    }
-
-    private User getUser(String email) {
-        return userRepository.findByEmail(email)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
     }
 }

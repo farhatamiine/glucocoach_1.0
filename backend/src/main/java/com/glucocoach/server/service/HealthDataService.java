@@ -9,10 +9,8 @@ import com.glucocoach.server.domain.HealthData;
 import com.glucocoach.server.domain.User;
 import com.glucocoach.server.dto.request.HealthDataRequest;
 import com.glucocoach.server.dto.response.HealthDataResponse;
-import com.glucocoach.server.exception.ResourceNotFoundException;
 import com.glucocoach.server.mapper.HealthDataMapper;
 import com.glucocoach.server.repository.HealthDataRepository;
-import com.glucocoach.server.repository.UserRepository;
 
 import lombok.RequiredArgsConstructor;
 
@@ -21,11 +19,11 @@ import lombok.RequiredArgsConstructor;
 public class HealthDataService {
 
     private final HealthDataRepository healthDataRepository;
-    private final UserRepository userRepository;
+    private final OwnershipValidator ownershipValidator;
     private final HealthDataMapper healthDataMapper;
 
     public List<HealthDataResponse> getAll(String email) {
-        User user = getUser(email);
+        User user = ownershipValidator.getCurrentUser(email);
         return healthDataRepository.findByUserIdOrderByDateDesc(user.getId())
                 .stream()
                 .map(healthDataMapper::toResponse)
@@ -34,7 +32,7 @@ public class HealthDataService {
 
     @Transactional
     public HealthDataResponse create(HealthDataRequest request, String email) {
-        User user = getUser(email);
+        User user = ownershipValidator.getCurrentUser(email);
         HealthData healthData = healthDataMapper.toEntity(request);
         healthData.setUser(user);
         return healthDataMapper.toResponse(healthDataRepository.save(healthData));
@@ -42,14 +40,9 @@ public class HealthDataService {
 
     @Transactional
     public void delete(Long id, String email) {
-        User user = getUser(email);
-        HealthData healthData = healthDataRepository.findByIdAndUserId(id, user.getId())
-                .orElseThrow(() -> new ResourceNotFoundException("Health data not found with id: " + id));
+        User user = ownershipValidator.getCurrentUser(email);
+        HealthData healthData = ownershipValidator.validateOwnership(
+                id, user.getId(), healthDataRepository::findByIdAndUserId, "Health data");
         healthDataRepository.delete(healthData);
-    }
-
-    private User getUser(String email) {
-        return userRepository.findByEmail(email)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
     }
 }

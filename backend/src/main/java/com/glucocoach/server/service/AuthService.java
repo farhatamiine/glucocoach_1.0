@@ -58,7 +58,7 @@ public class AuthService {
         String refreshToken = jwtService.generateRefreshToken(user.getEmail());
 
         refreshTokenRepository.save(RefreshToken.builder()
-                .token(refreshToken)
+                .token(sha256Hex(refreshToken))
                 .expiresAt(Instant.now().plusMillis(604800000))
                 .user(user)   // ← was missing: links token to the user row (FK user_id)
                 .build());
@@ -92,7 +92,7 @@ public class AuthService {
         String refreshToken = jwtService.generateRefreshToken(user.getEmail());
 
         refreshTokenRepository.save(RefreshToken.builder()
-                .token(refreshToken)
+                .token(sha256Hex(refreshToken))
                 .expiresAt(Instant.now().plusMillis(604800000))
                 .user(user)
                 .build());
@@ -109,7 +109,7 @@ public class AuthService {
     @Transactional
     public AuthResponse refresh(RefreshRequest request) {
         RefreshToken stored = refreshTokenRepository
-                .findByToken(request.getRefreshToken())
+                .findByToken(sha256Hex(request.getRefreshToken()))
                 .orElseThrow(() -> new UnauthorizedException("Refresh token not found"));
 
         // Check if the refresh token has expired
@@ -129,7 +129,7 @@ public class AuthService {
         String newRefreshToken = jwtService.generateRefreshToken(user.getEmail());
 
         refreshTokenRepository.save(RefreshToken.builder()
-                .token(newRefreshToken)
+                .token(sha256Hex(newRefreshToken))
                 .expiresAt(Instant.now().plusMillis(604800000))
                 .user(user)
                 .build());
@@ -145,7 +145,7 @@ public class AuthService {
     // The access token will expire naturally (stateless — we don't blacklist it)
     @Transactional
     public void logout(RefreshRequest request) {
-        refreshTokenRepository.findByToken(request.getRefreshToken())
+        refreshTokenRepository.findByToken(sha256Hex(request.getRefreshToken()))
                 .ifPresent(refreshTokenRepository::delete);
         // ifPresent: if token doesn't exist we do nothing (idempotent logout)
     }

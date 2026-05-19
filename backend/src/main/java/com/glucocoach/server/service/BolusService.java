@@ -14,7 +14,6 @@ import com.glucocoach.server.exception.ResourceNotFoundException;
 import com.glucocoach.server.mapper.BolusMapper;
 import com.glucocoach.server.repository.BolusRepository;
 import com.glucocoach.server.repository.MealRepository;
-import com.glucocoach.server.repository.UserRepository;
 
 import lombok.RequiredArgsConstructor;
 
@@ -24,11 +23,11 @@ public class BolusService {
 
     private final BolusRepository bolusRepository;
     private final MealRepository mealRepository;
-    private final UserRepository userRepository;
+    private final OwnershipValidator ownershipValidator;
     private final BolusMapper bolusMapper;
 
     public List<BolusResponse> getAll(String email) {
-        User user = getUser(email);
+        User user = ownershipValidator.getCurrentUser(email);
         return bolusRepository.findByUserIdOrderByTimestampDesc(user.getId())
                 .stream()
                 .map(bolusMapper::toResponse)
@@ -37,7 +36,7 @@ public class BolusService {
 
     @Transactional
     public BolusResponse create(BolusRequest request, String email) {
-        User user = getUser(email);
+        User user = ownershipValidator.getCurrentUser(email);
         Bolus bolus = bolusMapper.toEntity(request);
         bolus.setUser(user);
 
@@ -54,14 +53,9 @@ public class BolusService {
 
     @Transactional
     public void delete(Long id, String email) {
-        User user = getUser(email);
-        Bolus bolus = bolusRepository.findByIdAndUserId(id, user.getId())
-                .orElseThrow(() -> new ResourceNotFoundException("Bolus entry not found with id: " + id));
+        User user = ownershipValidator.getCurrentUser(email);
+        Bolus bolus = ownershipValidator.validateOwnership(
+                id, user.getId(), bolusRepository::findByIdAndUserId, "Bolus entry");
         bolusRepository.delete(bolus);
-    }
-
-    private User getUser(String email) {
-        return userRepository.findByEmail(email)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
     }
 }

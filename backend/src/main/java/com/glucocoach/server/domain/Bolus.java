@@ -27,7 +27,7 @@ import lombok.ToString;
 @ToString(exclude = {"user", "meal"})
 @Entity
 @Table(name = "bolus")
-public class Bolus {
+public class Bolus implements OwnedEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

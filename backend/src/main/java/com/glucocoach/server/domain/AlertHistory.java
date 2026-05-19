@@ -28,7 +28,7 @@ import lombok.ToString;
 @ToString(exclude = "user")
 @Entity
 @Table(name = "alert_history")
-public class AlertHistory {
+public class AlertHistory implements OwnedEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

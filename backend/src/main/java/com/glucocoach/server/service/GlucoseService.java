@@ -11,7 +11,7 @@ import java.util.OptionalDouble;
 import java.util.TreeMap;
 import java.util.stream.Collectors;
 
-import org.apache.commons.math.stat.descriptive.DescriptiveStatistics;
+import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics;
 import org.springframework.stereotype.Service;
 
 import com.glucocoach.server.domain.enums.BolusType;
