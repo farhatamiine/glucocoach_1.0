@@ -1,9 +1,6 @@
 import AppSidebar from '@/components/shadcn-space/radix/blocks/dashboard-shell-01/app-sidebar';
-import EarningReportChart from '@/components/shadcn-space/radix/blocks/dashboard-shell-01/earning-report-chart';
 import SalesOverviewChart from '@/components/shadcn-space/radix/blocks/dashboard-shell-01/sales-overview-chart';
-import SalesByCountryWidget from '@/components/shadcn-space/radix/blocks/dashboard-shell-01/salesbycountrywidget';
 import StatisticsBlock from '@/components/shadcn-space/radix/blocks/dashboard-shell-01/statistics';
-import TopProductTable from '@/components/shadcn-space/radix/blocks/dashboard-shell-01/top-product-table';
 
 export default function Home() {
     return (
@@ -14,15 +11,6 @@ export default function Home() {
                 </div>
                 <div className="xl:col-span-8 col-span-12">
                     <SalesOverviewChart />
-                </div>
-                <div className="xl:col-span-4 col-span-12">
-                    <EarningReportChart />
-                </div>
-                <div className="xl:col-span-8 col-span-12">
-                    <TopProductTable />
-                </div>
-                <div className="xl:col-span-4 col-span-12">
-                    <SalesByCountryWidget />
                 </div>
             </div>
         </AppSidebar>
