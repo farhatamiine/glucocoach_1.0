@@ -18,7 +18,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
     title: 'GlucoCoach',
-    description: 'A new way to manage you diabetes',
+    description: 'A new way to manage your diabetes',
 };
 
 export default function RootLayout({

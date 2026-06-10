@@ -15,7 +15,7 @@ export function SiteHeader() {
       <div className="flex items-center gap-2">
         <SidebarTrigger className="-ml-1 h-8 w-8 cursor-pointer" />
         <InputGroup className="h-9 rounded-md">
-          <InputGroupInput placeholder="Search" />
+          <InputGroupInput placeholder="Search" aria-label="Search" />
           <InputGroupAddon>
             <SearchIcon />
           </InputGroupAddon>
