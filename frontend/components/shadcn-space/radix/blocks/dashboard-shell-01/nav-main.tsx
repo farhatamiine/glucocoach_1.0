@@ -73,6 +73,7 @@ export function NavMain({ items }: { items: NavItem[] }) {
           <SidebarMenu>
             <SidebarMenuItem>
               <SidebarMenuButton
+                asChild
                 tooltip={item.title}
                 className={cn(
                   "rounded-lg text-sm px-3 py-2 h-9 cursor-pointer",
@@ -81,9 +82,9 @@ export function NavMain({ items }: { items: NavItem[] }) {
                     : "",
                 )}
               >
-                {item.icon && <item.icon />}
-                <a href={item.href} className="w-full">
-                  {item.title}
+                <a href={item.href ?? "#"} className="flex w-full items-center gap-2">
+                  {item.icon && <item.icon />}
+                  <span>{item.title}</span>
                 </a>
               </SidebarMenuButton>
             </SidebarMenuItem>

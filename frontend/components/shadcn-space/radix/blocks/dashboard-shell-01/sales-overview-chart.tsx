@@ -41,6 +41,11 @@ const chartConfig = {
 } satisfies ChartConfig;
 
 export default function SalesOverviewChart() {
+  const maxStack = Math.max(
+    ...chartData.map((d) => d.expense + d.profit + d.earning)
+  );
+  const yMax = Math.ceil(maxStack / 50) * 50;
+
   const Countries = [
     {
       id: 1,
@@ -109,8 +114,8 @@ export default function SalesOverviewChart() {
               tickMargin={10}
               fontSize={12}
               tickFormatter={(value) => `${value / 10}k`}
-              domain={[0, 100]}
-              ticks={[0, 50, 100, 150, 200, 250, 300]}
+              domain={[0, yMax]}
+              ticks={Array.from({ length: yMax / 50 + 1 }, (_, i) => i * 50)}
             />
             <ChartTooltip content={<ChartTooltipContent hideLabel />} />
             <Bar

@@ -21,9 +21,9 @@ import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 
 const DEFAULT_DROPDOWN_ITEMS = [
-  { title: "Action", link: "#" },
-  { title: "Another action", link: "#" },
-  { title: "Something else", link: "#" },
+  { title: "Action" },
+  { title: "Another action" },
+  { title: "Something else" },
 ];
 
 const DEFAULT_TRANS_DATA = [
@@ -127,7 +127,7 @@ const SalesByCountryWidget = ({
                   key={index}
                   className="font-normal cursor-pointer"
                 >
-                  {item.link ? (
+                  {item.link && item.link !== "#" ? (
                     <a href={item.link} className="w-full">
                       {item.title}
                     </a>
