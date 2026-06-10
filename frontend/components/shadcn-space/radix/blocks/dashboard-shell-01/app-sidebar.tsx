@@ -37,44 +37,49 @@ export const navData: NavItem[] = [
     // Dashboards Section
 
     { label: 'Dashboard', isSection: true },
-    { title: 'Dashboards', icon: LayoutDashboard, href: '#', isActive: true },
+    { title: 'Dashboards', icon: LayoutDashboard, href: '/' },
 
     // Pages Section
     { label: 'Diabetes', isSection: true },
-    { title: 'Glucose Analytics', icon: Activity, href: '#' },
-    { title: 'Insulin', icon: Syringe, href: '#' },
-    { title: 'Meals', icon: Utensils, href: '#' },
-    { title: 'Alerts', icon: Bell, href: '#' },
-    { title: 'Lab Results', icon: FlaskConical, href: '#' },
+    { title: 'Glucose Analytics', icon: Activity, href: '/glucose-analytics' },
+    { title: 'Insulin', icon: Syringe, href: '/insulin' },
+    { title: 'Meals', icon: Utensils, href: '/meals' },
+    { title: 'Alerts', icon: Bell, href: '/alerts' },
+    { title: 'Lab Results', icon: FlaskConical, href: '/lab-results' },
 
     // Health
     { label: 'Health', isSection: true },
-    { title: 'Health Metrics', icon: HeartPulse, href: '#' },
-    { title: 'Activity & Sleep', icon: Activity, href: '#' },
-    { title: 'Hydration', icon: Droplets, href: '#' },
+    { title: 'Health Metrics', icon: HeartPulse, href: '/health-metrics' },
+    { title: 'Activity & Sleep', icon: Activity, href: '/activity-sleep' },
+    { title: 'Hydration', icon: Droplets, href: '/hydration' },
 
     //AI
     { label: 'AI', isSection: true },
     {
         title: 'AI Coach',
         icon: Brain,
+        href: '/ai-coach',
     },
     {
         title: 'Meal Scanner',
         icon: ScanLine,
+        href: '/meal-scanner',
     },
     {
         title: 'Insights & Patterns',
         icon: Lightbulb,
+        href: '/insights-patterns',
     },
     { label: 'Reports', isSection: true },
     {
         title: 'Report',
         icon: FileText,
+        href: '/report',
     },
     {
-        title: 'History ',
+        title: 'History',
         icon: History,
+        href: '/history',
     },
 ];
 
