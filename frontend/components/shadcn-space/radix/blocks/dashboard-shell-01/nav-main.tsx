@@ -19,6 +19,7 @@ import {
 import { NavItem } from "@/components/shadcn-space/radix/blocks/dashboard-shell-01/app-sidebar";
 import { cn } from "@/lib/utils";
 import { usePathname } from "next/navigation";
+import Link from "next/link";
 
 export function NavMain({ items }: { items: NavItem[] }) {
   const pathname = usePathname();
@@ -82,10 +83,10 @@ export function NavMain({ items }: { items: NavItem[] }) {
                     : "",
                 )}
               >
-                <a href={item.href ?? "#"} className="flex w-full items-center gap-2">
+                <Link href={item.href ?? "#"} className="flex w-full items-center gap-2">
                   {item.icon && <item.icon />}
                   <span>{item.title}</span>
-                </a>
+                </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
           </SidebarMenu>
@@ -121,7 +122,7 @@ export function NavMain({ items }: { items: NavItem[] }) {
       return (
         <SidebarMenuSubItem key={item.title} className="w-full">
           <SidebarMenuSubButton className="w-full" asChild>
-            <a href={item.href}>{item.title}</a>
+            <Link href={item.href ?? "#"}>{item.title}</Link>
           </SidebarMenuSubButton>
         </SidebarMenuSubItem>
       );

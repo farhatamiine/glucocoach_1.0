@@ -2,7 +2,16 @@
 import Logo from '@/assets/logo/logo';
 import { NavMain } from '@/components/shadcn-space/radix/blocks/dashboard-shell-01/nav-main';
 import { SiteHeader } from '@/components/shadcn-space/radix/blocks/dashboard-shell-01/site-header';
-import { Sidebar, SidebarContent, SidebarHeader, SidebarMenu, SidebarMenuItem, SidebarProvider } from '@/components/ui/sidebar';
+import {
+    Sidebar,
+    SidebarContent,
+    SidebarHeader,
+    SidebarMenu,
+    SidebarMenuButton,
+    SidebarMenuItem,
+    SidebarProvider,
+} from '@/components/ui/sidebar';
+import Link from 'next/link';
 import {
     Activity,
     Bell,
@@ -96,9 +105,11 @@ const AppSidebar = ({ children }: { children: React.ReactNode }) => {
                     <SidebarHeader className="py-0 px-4">
                         <SidebarMenu>
                             <SidebarMenuItem>
-                                <a href="#" className="w-full h-full ">
-                                    <Logo />
-                                </a>
+                                <SidebarMenuButton asChild className="h-auto p-0 hover:bg-transparent">
+                                    <Link href="/" className="w-full h-full ">
+                                        <Logo />
+                                    </Link>
+                                </SidebarMenuButton>
                             </SidebarMenuItem>
                         </SidebarMenu>
                     </SidebarHeader>

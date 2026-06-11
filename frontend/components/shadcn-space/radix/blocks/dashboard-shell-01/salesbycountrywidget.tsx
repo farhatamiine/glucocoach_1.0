@@ -19,6 +19,7 @@ import {
 import { motion, useInView } from "motion/react";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
+import Link from "next/link";
 
 const DEFAULT_DROPDOWN_ITEMS = [
   { title: "Action" },
@@ -126,11 +127,12 @@ const SalesByCountryWidget = ({
                 <DropdownMenuItem
                   key={index}
                   className="font-normal cursor-pointer"
+                  asChild
                 >
                   {item.link && item.link !== "#" ? (
-                    <a href={item.link} className="w-full">
+                    <Link href={item.link} className="w-full">
                       {item.title}
-                    </a>
+                    </Link>
                   ) : (
                     <span className="w-full justify-start">{item.title}</span>
                   )}
