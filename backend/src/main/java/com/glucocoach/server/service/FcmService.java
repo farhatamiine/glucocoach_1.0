@@ -9,6 +9,7 @@ import com.google.firebase.messaging.WebpushConfig;
 import com.google.firebase.messaging.WebpushNotification;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
@@ -20,6 +21,9 @@ import java.util.Optional;
 @Service
 @RequiredArgsConstructor
 public class FcmService {
+
+    @Value("${app.fcm.webpush.click-action:/}")
+    private String clickAction;
 
     // Optional because FcmConfig is @ConditionalOnExpression — absent in dev/CI
     private final Optional<FirebaseMessaging> firebaseMessaging;
@@ -58,7 +62,7 @@ public class FcmService {
                             .setNotification(WebpushNotification.builder()
                                     .setIcon("/assets/logo/gluco-coach-icon.png")
                                     .build())
-                            .setFcmOptions(com.google.firebase.messaging.WebpushFcmOptions.withLink("/"))
+                            .setFcmOptions(com.google.firebase.messaging.WebpushFcmOptions.withLink(clickAction))
                             .build())
                     .setToken(fcmToken)
                     .build();

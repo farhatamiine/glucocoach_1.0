@@ -96,14 +96,24 @@ public class UserService {
         userRepository.save(user);
     }
 
-    public boolean sendTestNotification(String email) {
+    /**
+     * Sends a test push notification.
+     * @return 1 for success, 0 for missing token, -1 for stale/invalid token
+     */
+    public int sendTestNotification(String email) {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
-        return fcmService.sendPush(
+        if (user.getFcmToken() == null || user.getFcmToken().isBlank()) {
+            return 0;
+        }
+
+        boolean sent = fcmService.sendPush(
                 user.getFcmToken(),
                 "GlucoCoach Test",
                 "This is a test notification from your GlucoCoach server."
         );
+
+        return sent ? 1 : -1;
     }
 }

@@ -1,5 +1,6 @@
 package com.glucocoach.server.controller;
 
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -86,11 +87,12 @@ public class UserController {
     // Sends a test push notification to the authenticated user's registered device
     @PostMapping("/fcm-test")
     public ResponseEntity<String> sendTestNotification(@AuthenticationPrincipal User currentUser) {
-        boolean sent = userService.sendTestNotification(currentUser.getEmail());
-        if (sent) {
-            return ResponseEntity.ok("Test notification sent successfully");
-        } else {
-            return ResponseEntity.badRequest().body("Failed to send test notification. Ensure FCM is configured and token is valid.");
-        }
+        int status = userService.sendTestNotification(currentUser.getEmail());
+        return switch (status) {
+            case 1 -> ResponseEntity.ok("Test notification sent successfully");
+            case 0 -> ResponseEntity.badRequest().body("No FCM token registered for this device. Please save a token first.");
+            case -1 -> ResponseEntity.status(HttpStatus.GONE).body("Your FCM token is invalid or expired. Please re-register your device.");
+            default -> ResponseEntity.internalServerError().body("An unexpected error occurred while sending the test notification.");
+        };
     }
 }
