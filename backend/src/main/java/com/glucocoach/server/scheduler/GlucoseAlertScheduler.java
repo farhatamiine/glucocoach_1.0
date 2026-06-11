@@ -102,7 +102,12 @@ public class GlucoseAlertScheduler {
             NotifyVia notifyVia = alert.getNotifyVia();
             switch (notifyVia) {
                 case PUSH -> {
-                    boolean tokenValid = fcmService.sendPush(user.getFcmToken(), title, body);
+                    Map<String, String> data = Map.of(
+                            "sgv", String.valueOf((int) sgv),
+                            "direction", direction.name(),
+                            "alertId", String.valueOf(alert.getId())
+                    );
+                    boolean tokenValid = fcmService.sendPush(user.getFcmToken(), title, body, data);
                     if (!tokenValid) {
                         log.info("Clearing stale FCM token for user {}", user.getId());
                         userService.clearFcmToken(user.getId());

@@ -72,14 +72,15 @@ class GlucoseAlertSchedulerTest {
         when(alertHistoryRepository.findTopByUserIdAndAlertIdAndDirectionOrderByTriggeredAtDesc(
                 eq(user.getId()), eq(alert.getId()), eq(AlertDirection.LOW)))
                 .thenReturn(Optional.empty());
-        when(fcmService.sendPush(eq("device-fcm-token"), eq("GlucoCoach Alert"), contains("Low glucose: 60"))).thenReturn(true);
+        when(fcmService.sendPush(eq("device-fcm-token"), eq("GlucoCoach Alert"), contains("Low glucose: 60"), anyMap())).thenReturn(true);
 
         scheduler.checkGlucoseAlerts();
 
         verify(fcmService).sendPush(
                 eq("device-fcm-token"),
                 eq("GlucoCoach Alert"),
-                contains("Low glucose: 60"));
+                contains("Low glucose: 60"),
+                argThat(map -> map.get("sgv").equals("60") && map.get("direction").equals("LOW")));
 
         ArgumentCaptor<AlertHistory> captor = ArgumentCaptor.forClass(AlertHistory.class);
         verify(alertHistoryRepository).save(captor.capture());
@@ -103,14 +104,15 @@ class GlucoseAlertSchedulerTest {
         when(alertHistoryRepository.findTopByUserIdAndAlertIdAndDirectionOrderByTriggeredAtDesc(
                 eq(user.getId()), eq(alert.getId()), eq(AlertDirection.HIGH)))
                 .thenReturn(Optional.empty());
-        when(fcmService.sendPush(eq("device-fcm-token"), eq("GlucoCoach Alert"), contains("High glucose: 220"))).thenReturn(true);
+        when(fcmService.sendPush(eq("device-fcm-token"), eq("GlucoCoach Alert"), contains("High glucose: 220"), anyMap())).thenReturn(true);
 
         scheduler.checkGlucoseAlerts();
 
         verify(fcmService).sendPush(
                 eq("device-fcm-token"),
                 eq("GlucoCoach Alert"),
-                contains("High glucose: 220"));
+                contains("High glucose: 220"),
+                argThat(map -> map.get("sgv").equals("220") && map.get("direction").equals("HIGH")));
 
         ArgumentCaptor<AlertHistory> captor = ArgumentCaptor.forClass(AlertHistory.class);
         verify(alertHistoryRepository).save(captor.capture());
@@ -150,11 +152,11 @@ class GlucoseAlertSchedulerTest {
         when(alertHistoryRepository.findTopByUserIdAndAlertIdAndDirectionOrderByTriggeredAtDesc(
                 eq(userNoToken.getId()), eq(alertNoToken.getId()), eq(AlertDirection.LOW)))
                 .thenReturn(Optional.empty());
-        when(fcmService.sendPush(isNull(), eq("GlucoCoach Alert"), contains("Low glucose"))).thenReturn(true);
+        when(fcmService.sendPush(isNull(), eq("GlucoCoach Alert"), contains("Low glucose"), anyMap())).thenReturn(true);
 
         scheduler.checkGlucoseAlerts();
 
-        verify(fcmService).sendPush(isNull(), eq("GlucoCoach Alert"), contains("Low glucose"));
+        verify(fcmService).sendPush(isNull(), eq("GlucoCoach Alert"), contains("Low glucose"), anyMap());
         verify(alertHistoryRepository).save(any(AlertHistory.class));
     }
 
@@ -179,7 +181,7 @@ class GlucoseAlertSchedulerTest {
         when(alertHistoryRepository.findTopByUserIdAndAlertIdAndDirectionOrderByTriggeredAtDesc(
                 eq(user.getId()), eq(alert.getId()), eq(AlertDirection.LOW)))
                 .thenReturn(Optional.empty());
-        when(fcmService.sendPush(eq("device-fcm-token"), eq("GlucoCoach Alert"), contains("Low glucose: 60"))).thenReturn(false);
+        when(fcmService.sendPush(eq("device-fcm-token"), eq("GlucoCoach Alert"), contains("Low glucose: 60"), anyMap())).thenReturn(false);
 
         scheduler.checkGlucoseAlerts();
 
@@ -230,11 +232,11 @@ class GlucoseAlertSchedulerTest {
         when(alertHistoryRepository.findTopByUserIdAndAlertIdAndDirectionOrderByTriggeredAtDesc(
                 eq(user.getId()), eq(alert.getId()), eq(AlertDirection.LOW)))
                 .thenReturn(Optional.of(oldHistory));
-        when(fcmService.sendPush(any(), eq("GlucoCoach Alert"), contains("Low glucose: 60"))).thenReturn(true);
+        when(fcmService.sendPush(any(), eq("GlucoCoach Alert"), contains("Low glucose: 60"), anyMap())).thenReturn(true);
 
         scheduler.checkGlucoseAlerts();
 
-        verify(fcmService).sendPush(any(), eq("GlucoCoach Alert"), contains("Low glucose: 60"));
+        verify(fcmService).sendPush(any(), eq("GlucoCoach Alert"), contains("Low glucose: 60"), anyMap());
         verify(alertHistoryRepository).save(any(AlertHistory.class));
     }
 
@@ -257,11 +259,11 @@ class GlucoseAlertSchedulerTest {
         when(alertHistoryRepository.findTopByUserIdAndAlertIdAndDirectionOrderByTriggeredAtDesc(
                 eq(user.getId()), eq(alert.getId()), eq(AlertDirection.HIGH)))
                 .thenReturn(Optional.empty());
-        when(fcmService.sendPush(any(), eq("GlucoCoach Alert"), contains("High glucose: 220"))).thenReturn(true);
+        when(fcmService.sendPush(any(), eq("GlucoCoach Alert"), contains("High glucose: 220"), anyMap())).thenReturn(true);
 
         scheduler.checkGlucoseAlerts();
 
-        verify(fcmService).sendPush(any(), eq("GlucoCoach Alert"), contains("High glucose: 220"));
+        verify(fcmService).sendPush(any(), eq("GlucoCoach Alert"), contains("High glucose: 220"), anyMap());
         verify(alertHistoryRepository).save(any(AlertHistory.class));
     }
 }

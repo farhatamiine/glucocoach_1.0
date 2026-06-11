@@ -5,6 +5,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -79,5 +80,17 @@ public class UserController {
             @Valid @RequestBody FcmTokenRequest request) {
         userService.saveFcmToken(currentUser.getEmail(), request.getFcmToken());
         return ResponseEntity.ok().build();
+    }
+
+    // ── POST /api/users/fcm-test ─────────────────────────────────────────────
+    // Sends a test push notification to the authenticated user's registered device
+    @PostMapping("/fcm-test")
+    public ResponseEntity<String> sendTestNotification(@AuthenticationPrincipal User currentUser) {
+        boolean sent = userService.sendTestNotification(currentUser.getEmail());
+        if (sent) {
+            return ResponseEntity.ok("Test notification sent successfully");
+        } else {
+            return ResponseEntity.badRequest().body("Failed to send test notification. Ensure FCM is configured and token is valid.");
+        }
     }
 }
