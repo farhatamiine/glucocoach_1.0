@@ -24,6 +24,7 @@ public class UserService {
     private final RefreshTokenRepository refreshTokenRepository;
     private final UserMapper userMapper;
     private final PasswordEncoder passwordEncoder;
+    private final FcmService fcmService;
 
     // ── GET ME ────────────────────────────────────────────────────────────────
     // Called by GET /api/users/me
@@ -93,5 +94,26 @@ public class UserService {
                         "User not found with id: " + userId));
         user.setFcmToken(null);
         userRepository.save(user);
+    }
+
+    /**
+     * Sends a test push notification.
+     * @return 1 for success, 0 for missing token, -1 for stale/invalid token
+     */
+    public int sendTestNotification(String email) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
+        if (user.getFcmToken() == null || user.getFcmToken().isBlank()) {
+            return 0;
+        }
+
+        boolean sent = fcmService.sendPush(
+                user.getFcmToken(),
+                "GlucoCoach Test",
+                "This is a test notification from your GlucoCoach server."
+        );
+
+        return sent ? 1 : -1;
     }
 }
