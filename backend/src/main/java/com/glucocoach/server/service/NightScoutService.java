@@ -8,6 +8,8 @@ import java.util.Collections;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -28,10 +30,17 @@ public class NightScoutService {
     private String nightscoutUrl;
 
     private List<NightscoutEntryDTO> fetchEntries(URI uri) {
+        HttpHeaders headers = new HttpHeaders();
+        if (apiSecret != null && !apiSecret.isBlank()) {
+            headers.set("api-secret", apiSecret);
+        }
+
+        HttpEntity<Void> entity = new HttpEntity<>(headers);
+
         ResponseEntity<NightscoutEntryDTO[]> response = restTemplate.exchange(
                 uri,
                 HttpMethod.GET,
-                null, // ← no headers at all
+                entity,
                 NightscoutEntryDTO[].class);
         return response.getBody() != null ? Arrays.asList(response.getBody()) : Collections.emptyList();
     }
