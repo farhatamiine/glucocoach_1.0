@@ -1,8 +1,8 @@
-import EarningReportChart from '@/components/shadcn-space/radix/blocks/dashboard-shell-01/earning-report-chart';
-import SalesOverviewChart from '@/components/shadcn-space/radix/blocks/dashboard-shell-01/sales-overview-chart';
-import SalesByCountryWidget from '@/components/shadcn-space/radix/blocks/dashboard-shell-01/salesbycountrywidget';
-import StatisticsBlock from '@/components/shadcn-space/radix/blocks/dashboard-shell-01/statistics';
-import TopProductTable from '@/components/shadcn-space/radix/blocks/dashboard-shell-01/top-product-table';
+import EarningReportChart from '@/components/dashboard/earning-report-chart';
+import SalesOverviewChart from '@/components/dashboard/sales-overview-chart';
+import SalesByCountryWidget from '@/components/dashboard/salesbycountrywidget';
+import StatisticsBlock from '@/components/dashboard/statistics';
+import TopProductTable from '@/components/dashboard/top-product-table';
 
 export default function DashboardPage() {
     return (

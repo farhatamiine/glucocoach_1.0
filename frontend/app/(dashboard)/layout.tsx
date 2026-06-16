@@ -1,4 +1,4 @@
-import AppSidebar from '@/components/shadcn-space/radix/blocks/dashboard-shell-01/app-sidebar';
+import AppSidebar from '@/components/dashboard/app-sidebar';
 
 export default function DashboardLayout({
     children,
