@@ -1,7 +1,7 @@
 'use client';
 
-import NotificationDropdown from "@/components/shadcn-space/radix/blocks/dashboard-shell-01/notification-dropdown";
-import UserDropdown from "@/components/shadcn-space/radix/blocks/dashboard-shell-01/user-dropdown";
+import NotificationDropdown from "@/components/dashboard/notification-dropdown";
+import UserDropdown from "@/components/dashboard/user-dropdown";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { BellRing } from "lucide-react";

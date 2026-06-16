@@ -1,7 +1,7 @@
 'use client';
 import Logo from '@/assets/logo/logo';
-import { NavMain } from '@/components/shadcn-space/radix/blocks/dashboard-shell-01/nav-main';
-import { SiteHeader } from '@/components/shadcn-space/radix/blocks/dashboard-shell-01/site-header';
+import { NavMain } from '@/components/dashboard/nav-main';
+import { SiteHeader } from '@/components/dashboard/site-header';
 import {
     Sidebar,
     SidebarContent,
@@ -106,7 +106,7 @@ const AppSidebar = ({ children }: { children: React.ReactNode }) => {
                         <SidebarMenu>
                             <SidebarMenuItem>
                                 <SidebarMenuButton asChild className="h-auto p-0 hover:bg-transparent">
-                                    <Link href="/" className="w-full h-full ">
+                                    <Link href="/public" className="w-full h-full ">
                                         <Logo />
                                     </Link>
                                 </SidebarMenuButton>
