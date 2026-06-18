@@ -1,4 +1,4 @@
-import { TooltipProvider } from '@/components/ui/tooltip';
+import { AppQueryClientProvider } from '@/providers/query-client-provider';
 import { cn } from '@/lib/utils';
 import type { Metadata } from 'next';
 import { Geist, Geist_Mono, JetBrains_Mono } from 'next/font/google';
@@ -29,7 +29,7 @@ export default function RootLayout({
     return (
         <html lang="en" className={cn('h-full', 'antialiased', geistSans.variable, geistMono.variable, 'font-sans', jetbrainsMono.variable)}>
             <body className="min-h-full flex flex-col">
-                <TooltipProvider>{children}</TooltipProvider>
+                <AppQueryClientProvider>{children}</AppQueryClientProvider>
             </body>
         </html>
     );

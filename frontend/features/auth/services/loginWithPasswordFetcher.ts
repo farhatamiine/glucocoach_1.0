@@ -1,6 +1,10 @@
-export const LoginWithPasswordFetcher = async (email: string, password: string) => {
+import apiClient from "@/lib/axiosConfig";
+
+export const loginWithPasswordFetcher = async (email: string, password: string) => {
     if (email.trim() === '' || password.trim() === '') {
         throw new Error('email or password are required');
     }
-const {} = axios
+    console.log(email, password);
+    const {data} = await apiClient.post('/auth/login', {email, password});
+    return data;
 };
