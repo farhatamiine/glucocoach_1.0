@@ -1,8 +1,9 @@
 import AppSidebar from '@/components/dashboard/app-sidebar';
+import React from "react";
 
 export default function DashboardLayout({
-    children,
-}: {
+                                            children,
+                                        }: {
     children: React.ReactNode;
 }) {
     return (
