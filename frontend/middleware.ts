@@ -1,6 +1,6 @@
 import {NextRequest, NextResponse} from "next/server";
 import {authRoutes, protectedRoutes, readAuthCookie} from "@/lib/middleware.helper";
-import {DASHBOARD_PATH, LOGIN_PATH} from "@/const/pathNames";
+import {DASHBOARD_PATH} from "@/const/pathNames";
 
 export async function middleware(req: NextRequest) {
     const {pathname} = req.nextUrl;
@@ -17,11 +17,17 @@ export async function middleware(req: NextRequest) {
 
 
     if (isProtectedRoute && !isLoggedIn) {
-        return NextResponse.redirect(new URL(LOGIN_PATH, req.url));
+        const loginUrl = new URL('/login', req.url);
+        loginUrl.searchParams.set('callbackUrl', req.nextUrl.pathname);
+        return NextResponse.redirect(loginUrl);
     }
 
     if (isAuthRoute && isLoggedIn) {
-        return NextResponse.redirect(new URL(DASHBOARD_PATH, req.url));
+        const callbackUrl = req.nextUrl.searchParams.get('callbackUrl');
+
+        return NextResponse.redirect(
+            new URL(callbackUrl || DASHBOARD_PATH, req.url)
+        );
     }
 
 
@@ -41,6 +47,7 @@ export const config = {
         '/lab-results/:path*',
         '/meal-scanner/:path*',
         '/meals/:path*',
+        '/quick-log/:path*',
         '/report/:path*',
         '/dashboard',
         '/login',

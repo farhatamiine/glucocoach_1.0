@@ -22,6 +22,7 @@ export const protectedRoutes = [
     '/meal-scanner',
     '/meals',
     '/report',
+    '/quick-log',
     '/dashboard'
 ];
 

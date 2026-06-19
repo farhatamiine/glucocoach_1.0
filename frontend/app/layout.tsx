@@ -18,7 +18,12 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
     title: 'GlucoCoach',
-    description: 'A new way to manage your diabetes',
+    description: 'Diabetes tracking app',
+    appleWebApp: {
+        capable: true,
+        title: 'GlucoCoach',
+        statusBarStyle: 'default',
+    },
 };
 
 export default function RootLayout({
