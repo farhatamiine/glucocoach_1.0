@@ -2,7 +2,7 @@ import {NextRequest, NextResponse} from "next/server";
 import {authRoutes, protectedRoutes, readAuthCookie} from "@/lib/middleware.helper";
 import {DASHBOARD_PATH} from "@/const/pathNames";
 
-export async function middleware(req: NextRequest) {
+export async function proxy(req: NextRequest) {
     const {pathname} = req.nextUrl;
 
     const {refreshToken, accessToken} = readAuthCookie(req)
