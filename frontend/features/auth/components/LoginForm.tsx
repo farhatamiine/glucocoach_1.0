@@ -1,4 +1,5 @@
 'use client'
+
 import React from 'react';
 import {Button} from "@/components/ui/button";
 import {Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle} from "@/components/ui/card";
@@ -24,10 +25,8 @@ const LoginForm = () => {
 
     const handleLoginSuccess = () => {
         const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
-
         const fallbackUrl = isStandalone ? '/quick-log' : '/dashboard';
         const callbackUrl = searchParams.get('callbackUrl') || fallbackUrl;
-
         router.replace(callbackUrl);
     };
 
