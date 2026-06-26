@@ -1,4 +1,5 @@
 'use client'
+
 import React from 'react';
 import {Button} from "@/components/ui/button";
 import {Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle} from "@/components/ui/card";
@@ -9,8 +10,11 @@ import {LoginFormValues, loginSchema} from "@/features/auth/schemas/login.schema
 import useLoginForm from "@/features/auth/hooks/useLoginForm";
 import {zodResolver} from "@hookform/resolvers/zod";
 import {Field, FieldError, FieldLabel} from "@/components/ui/field";
+import {useRouter, useSearchParams} from "next/navigation";
 
 const LoginForm = () => {
+    const router = useRouter();
+    const searchParams = useSearchParams();
     const form = useForm<LoginFormValues>({
         resolver: zodResolver(loginSchema),
         defaultValues: {
@@ -18,23 +22,28 @@ const LoginForm = () => {
             password: '',
         },
     });
-    const {loginMutation} = useLoginForm()
+
+    const handleLoginSuccess = () => {
+        const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
+        const fallbackUrl = isStandalone ? '/quick-log' : '/dashboard';
+        const callbackUrl = searchParams.get('callbackUrl') || fallbackUrl;
+        router.replace(callbackUrl);
+    };
+
+    const {loginMutation} = useLoginForm({
+        onSuccess: () => {
+            handleLoginSuccess()
+        },
+        onError: (error) => {
+            console.log(error)
+        }
+    })
 
     const submitLogin = async (data: LoginFormValues) => {
         loginMutation({
             email: data.email,
             password: data.password,
-        }, {
-            onSuccess: () => {
-                console.log('Login successful')
-            },
-            onError: (error) => {
-                form.setError('email', {
-                    type: 'manual',
-                    message: error.message,
-                });
-            }
-        })
+        });
     }
 
     return (

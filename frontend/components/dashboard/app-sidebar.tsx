@@ -46,7 +46,7 @@ export const navData: NavItem[] = [
     // Dashboards Section
 
     { label: 'Dashboard', isSection: true },
-    { title: 'Dashboards', icon: LayoutDashboard, href: '/' },
+    { title: 'Dashboards', icon: LayoutDashboard, href: '/dashboard' },
 
     // Pages Section
     { label: 'Diabetes', isSection: true },
