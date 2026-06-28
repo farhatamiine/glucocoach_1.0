@@ -1,7 +1,8 @@
-import { AppQueryClientProvider } from '@/providers/query-client-provider';
-import { cn } from '@/lib/utils';
-import type { Metadata } from 'next';
-import { Geist, Geist_Mono, JetBrains_Mono } from 'next/font/google';
+import {AppQueryClientProvider} from '@/providers/query-client-provider';
+import {Toaster} from '@/components/ui/sonner';
+import {cn} from '@/lib/utils';
+import type {Metadata} from 'next';
+import {Geist, Geist_Mono, JetBrains_Mono} from 'next/font/google';
 import './globals.css';
 
 const jetbrainsMono = JetBrains_Mono({ subsets: ['latin'], variable: '--font-mono' });
@@ -35,6 +36,7 @@ export default function RootLayout({
         <html lang="en" className={cn('h-full', 'antialiased', geistSans.variable, geistMono.variable, 'font-sans', jetbrainsMono.variable)}>
             <body className="min-h-full flex flex-col">
                 <AppQueryClientProvider>{children}</AppQueryClientProvider>
+                <Toaster/>
             </body>
         </html>
     );

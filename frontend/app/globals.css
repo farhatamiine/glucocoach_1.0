@@ -23,6 +23,11 @@
   --color-chart-3: var(--chart-3);
   --color-chart-2: var(--chart-2);
   --color-chart-1: var(--chart-1);
+    /* Glucose zone semantics (see GlucoCoach design system: red is reserved for hypo) */
+    --color-glucose-low: var(--glucose-low);
+    --color-glucose-in-range: var(--glucose-in-range);
+    --color-glucose-high: var(--glucose-high);
+    --color-glucose-very-high: var(--glucose-very-high);
   --color-ring: var(--ring);
   --color-input: var(--input);
   --color-border: var(--border);
@@ -73,6 +78,10 @@
   --chart-3: #F59E0B;              /* high amber */
   --chart-4: #E53E3E;              /* low red */
   --chart-5: #3B82F6;              /* info blue */
+    --glucose-low: #E53E3E; /* gc-low-500 — hypoglycemia only */
+    --glucose-in-range: #10B981; /* gc-in-range-500 */
+    --glucose-high: #F59E0B; /* gc-high-500 */
+    --glucose-very-high: #EA580C; /* gc-very-high-500 */
   --radius: 0.875rem;              /* gc radius-lg 14px */
   --sidebar: #FFFFFF;
   --sidebar-foreground: #0F172A;
@@ -108,6 +117,11 @@
   --chart-3: #F59E0B;
   --chart-4: #E53E3E;
   --chart-5: #3B82F6;
+    /* Semantic colors shift slightly lighter in dark mode for contrast; red stays an alarm */
+    --glucose-low: #E53E3E;
+    --glucose-in-range: #34D399;
+    --glucose-high: #FBBF24;
+    --glucose-very-high: #FB923C;
   --sidebar: #111A2E;
   --sidebar-foreground: #E8EEF7;
   --sidebar-primary: #3FA5A8;
