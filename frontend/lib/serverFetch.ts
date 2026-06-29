@@ -1,20 +1,19 @@
 import {cookies} from "next/headers";
 import {NextResponse} from "next/server";
-import {ACCESS_TOKEN, REFRESH_TOKEN} from "@/const/cookieName";
+import {ACCESS_TOKEN} from "@/const/cookieName";
 
 /**
  * Server-side proxy to the Spring Boot backend.
  *
- * The browser holds the auth tokens as httpOnly cookies on the Next.js domain,
- * so it can never call the backend directly. Route handlers delegate here: we read
- * the access-token cookie and forward it as a Bearer token.
+ * The browser holds the auth tokens as httpOnly cookies on the Next.js domain, so it
+ * can never call the backend directly. Route handlers delegate here: we read the
+ * access-token cookie and forward it as a Bearer token.
  *
- * Transparent refresh: if the access token is missing or the backend answers 401,
- * we call POST /auth/refresh with the refresh-token cookie, set the rotated tokens
- * as new cookies, and retry the original request once. If refresh fails, the auth
- * cookies are cleared and a 401 is returned so the client can redirect to login.
- *
- * Mirrors the cookie handling in app/api/auth/login/route.ts.
+ * This proxy is deliberately STATELESS — it never refreshes tokens and never mutates
+ * cookies. If the access token is missing or the backend answers 401, we simply return
+ * 401. Token refresh is coordinated on the client (see lib/apiFetch.ts) and performed
+ * once by POST /api/auth/refresh, which is the only safe place to rotate the single-use
+ * refresh token when the app runs across many serverless instances.
  */
 
 const BASE = process.env.NEXT_PUBLIC_BASE_URL;
@@ -28,73 +27,25 @@ type ProxyInit = {
     body?: unknown;
 };
 
-type Tokens = { accessToken: string; refreshToken: string };
-
-/**
- * In-flight refresh calls, keyed by the refresh-token value.
- *
- * The backend issues single-use refresh tokens: the first /auth/refresh rotates
- * (invalidates) the token, so a second concurrent call with the same token gets a
- * 401 "Refresh token not found". A page mounts several components that each fire a
- * proxied request in parallel, so on reopen (when the short-lived access token has
- * expired) they'd all try to spend the same refresh token at once — one wins and the
- * losers would clear the auth cookies, logging the user out. Single-flighting the
- * refresh means concurrent callers in this process share one round-trip and all get
- * the same rotated tokens.
- */
-const refreshInFlight = new Map<string, Promise<Tokens | null>>();
-
-function refreshOnce(refreshToken: string): Promise<Tokens | null> {
-    const existing = refreshInFlight.get(refreshToken);
-    if (existing) return existing;
-
-    const pending = tryRefresh(refreshToken);
-    refreshInFlight.set(refreshToken, pending);
-    pending.finally(() => refreshInFlight.delete(refreshToken));
-    return pending;
-}
-
 export async function proxyToBackend(path: string, init: ProxyInit = {}): Promise<NextResponse> {
     const store = await cookies();
-    let accessToken = store.get(ACCESS_TOKEN)?.value;
-    const refreshToken = store.get(REFRESH_TOKEN)?.value;
+    const accessToken = store.get(ACCESS_TOKEN)?.value;
 
-    if (!accessToken && !refreshToken) {
-        return NextResponse.json({message: "Not authenticated"}, {status: 401});
+    // No usable access token → tell the client to refresh and retry.
+    if (!accessToken) {
+        return NextResponse.json({message: "Token expired"}, {status: 401});
     }
 
     const method = init.method ?? "GET";
     const sendsBody = init.body !== undefined && method !== "GET" && method !== "DELETE";
     const body = sendsBody ? JSON.stringify(init.body) : undefined;
 
-    let rotated: Tokens | null = null;
-
-    // No access token but we have a refresh token → refresh up front.
-    if (!accessToken && refreshToken) {
-        rotated = await refreshOnce(refreshToken);
-        if (!rotated) return clearedUnauthorized();
-        accessToken = rotated.accessToken;
-    }
-
-    let upstream = await callBackend(path, method, accessToken!, body);
+    const upstream = await callBackend(path, method, accessToken, body);
     if (!upstream) {
         return NextResponse.json({message: "Upstream request failed"}, {status: 502});
     }
 
-    // Access token rejected → refresh once and retry.
-    if (upstream.status === 401 && refreshToken) {
-        rotated = await refreshOnce(refreshToken);
-        if (!rotated) return clearedUnauthorized();
-        accessToken = rotated.accessToken;
-        upstream = await callBackend(path, method, accessToken, body);
-        if (!upstream) {
-            return NextResponse.json({message: "Upstream request failed"}, {status: 502});
-        }
-    }
-
-    const res = await passthrough(upstream);
-    if (rotated) setAuthCookies(res, rotated);
-    return res;
+    return passthrough(upstream);
 }
 
 async function callBackend(
@@ -116,24 +67,6 @@ async function callBackend(
     }
 }
 
-/** Exchange a refresh token for a fresh token pair, or null on failure. */
-async function tryRefresh(refreshToken: string): Promise<Tokens | null> {
-    try {
-        const res = await fetch(`${BASE}/auth/refresh`, {
-            method: "POST",
-            headers: {"Content-Type": "application/json", Accept: "application/json"},
-            body: JSON.stringify({refreshToken}),
-            cache: "no-store",
-        });
-        if (!res.ok) return null;
-        const data = (await res.json()) as Partial<Tokens>;
-        if (!data.accessToken || !data.refreshToken) return null;
-        return {accessToken: data.accessToken, refreshToken: data.refreshToken};
-    } catch {
-        return null;
-    }
-}
-
 /** Forward the upstream status/body, respecting null-body statuses (e.g. 204). */
 async function passthrough(upstream: Response): Promise<NextResponse> {
     const status = upstream.status;
@@ -145,32 +78,6 @@ async function passthrough(upstream: Response): Promise<NextResponse> {
         return new NextResponse(null, {status});
     }
     return NextResponse.json(safeJson(text), {status});
-}
-
-function setAuthCookies(res: NextResponse, tokens: Tokens): void {
-    const secure = process.env.NODE_ENV === "production";
-    res.cookies.set(ACCESS_TOKEN, tokens.accessToken, {
-        httpOnly: true,
-        secure,
-        sameSite: "lax",
-        path: "/",
-        maxAge: 60 * 15, // 15 min
-    });
-    res.cookies.set(REFRESH_TOKEN, tokens.refreshToken, {
-        httpOnly: true,
-        secure,
-        sameSite: "lax",
-        path: "/",
-        maxAge: 60 * 60 * 24 * 7, // 7 days
-    });
-}
-
-/** 401 + clear stale auth cookies so the client redirects to login. */
-function clearedUnauthorized(): NextResponse {
-    const res = NextResponse.json({message: "Session expired"}, {status: 401});
-    res.cookies.delete(ACCESS_TOKEN);
-    res.cookies.delete(REFRESH_TOKEN);
-    return res;
 }
 
 function safeJson(text: string): unknown {
