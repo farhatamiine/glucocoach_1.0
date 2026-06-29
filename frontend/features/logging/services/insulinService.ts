@@ -16,6 +16,7 @@ export function createBolus(values: BolusFormValues) {
             amount: values.amount,
             bolusType: values.bolusType,
             timestamp: localInputToIso(values.timestamp),
+            ...(values.mealId ? {mealId: values.mealId} : {}),
         }),
     });
 }

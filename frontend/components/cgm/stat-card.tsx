@@ -1,5 +1,7 @@
+import type {ReactNode} from "react";
 import {Card, CardContent} from "@/components/ui/card";
 import {Sparkline} from "@/components/cgm/sparkline";
+import {InfoHint} from "@/components/cgm/info-hint";
 import {cn} from "@/lib/utils";
 
 type DeltaDirection = "good" | "bad" | "neutral";
@@ -17,6 +19,8 @@ type StatCardProps = {
     valueColor?: string;
     sparkData?: number[];
     sparkColor?: string;
+    /** Optional plain-language explanation shown via an info tooltip on the label. */
+    hint?: ReactNode;
     className?: string;
 };
 
@@ -46,14 +50,18 @@ export const StatCard = ({
                              valueColor,
                              sparkData,
                              sparkColor,
+                             hint,
                              className,
                          }: StatCardProps) => {
     return (
         <Card className={cn("gap-0 rounded-lg", className)}>
             <CardContent className="flex flex-col gap-1">
-                <p className="text-[11px] font-bold tracking-[0.08em] text-muted-foreground uppercase">
-                    {label}
-                </p>
+                <div className="flex items-center gap-1">
+                    <p className="text-[11px] font-bold tracking-[0.08em] text-muted-foreground uppercase">
+                        {label}
+                    </p>
+                    {hint && <InfoHint label={label}>{hint}</InfoHint>}
+                </div>
                 <div className="flex items-baseline gap-1.5">
                     <span
                         className="text-2xl font-bold tracking-tight tabular-nums"

@@ -1,14 +1,16 @@
 "use client";
 
+import type {ReactNode} from "react";
 import {Area, ComposedChart, Line, ReferenceArea, ReferenceLine, XAxis, YAxis} from "recharts";
 import {Card, CardContent} from "@/components/ui/card";
 import {type ChartConfig, ChartContainer} from "@/components/ui/chart";
+import {InfoHint} from "@/components/cgm/info-hint";
 import {cn, GLUCOSE_THRESHOLDS} from "@/lib/utils";
 
 export type AGPPoint = {
     /** Minutes since midnight (0–1440) or any monotonic x. */
     t: number;
-    /** Axis label shown for this point, e.g. "6a". */
+    /** Axis label shown for this point, e.g. "06:00". */
     label?: string;
     median: number;
     /** [p25, p75] inter-quartile band. */
@@ -26,7 +28,6 @@ function sampleProfile(): AGPPoint[] {
     const pts: AGPPoint[] = [];
     for (let h = 0; h <= 24; h += 1) {
         const t = h * 60;
-        // Calm overnight, breakfast + lunch + dinner bumps.
         const base =
             108 +
             18 * Math.sin((h / 24) * Math.PI * 2 - 1) +
@@ -36,7 +37,7 @@ function sampleProfile(): AGPPoint[] {
         const median = Math.round(base);
         const iqrSpread = 16 + 8 * Math.exp(-(((h - 8) / 2) ** 2)) + 8 * Math.exp(-(((h - 19) / 2) ** 2));
         const outerSpread = iqrSpread * 2.3;
-        const label = h === 0 || h === 24 ? "12a" : h === 12 ? "12p" : h < 12 ? `${h}a` : `${h - 12}p`;
+        const label = `${String(h % 24).padStart(2, "0")}:00`;
         pts.push({
             t,
             label: h % 6 === 0 ? label : undefined,
@@ -52,6 +53,7 @@ type AGPChartProps = {
     data?: AGPPoint[];
     title?: string;
     subtitle?: string;
+    hint?: ReactNode;
     className?: string;
 };
 
@@ -63,6 +65,7 @@ export const AGPChart = ({
                              data,
                              title = "Ambulatory glucose profile",
                              subtitle = "5th–95th percentile bands · target zone 70–180",
+                             hint,
                              className,
                          }: AGPChartProps) => {
     const points = data ?? sampleProfile();
@@ -72,7 +75,10 @@ export const AGPChart = ({
             <CardContent className="flex flex-col gap-3.5">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                     <div>
-                        <div className="text-sm font-bold text-foreground">{title}</div>
+                        <div className="flex items-center gap-1">
+                            <div className="text-sm font-bold text-foreground">{title}</div>
+                            {hint && <InfoHint label="Ambulatory glucose profile">{hint}</InfoHint>}
+                        </div>
                         <div className="mt-0.5 text-xs text-muted-foreground">{subtitle}</div>
                     </div>
                     <div className="flex items-center gap-3.5 text-xs text-muted-foreground">

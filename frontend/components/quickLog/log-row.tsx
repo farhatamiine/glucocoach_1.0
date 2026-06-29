@@ -5,6 +5,7 @@ import {MoreVertical, Pencil, Trash2} from "lucide-react";
 import {Button} from "@/components/ui/button";
 import {DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,} from "@/components/ui/dropdown-menu";
 import {cn, formatRelativeTime} from "@/lib/utils";
+import {parseBackendDate} from "@/features/logging/datetime";
 
 type LogRowProps = {
     icon: LucideIcon;
@@ -39,7 +40,7 @@ export function LogRow({
             </div>
             {value && <div className="text-[13px] font-semibold text-foreground tabular-nums">{value}</div>}
             <time className="w-16 shrink-0 text-right font-mono text-[11px] text-muted-foreground">
-                {formatRelativeTime(new Date(at))}
+                {formatRelativeTime(parseBackendDate(at))}
             </time>
             {(onEdit || onDelete) && (
                 <DropdownMenu>
