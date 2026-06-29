@@ -30,6 +30,30 @@ type ProxyInit = {
 
 type Tokens = { accessToken: string; refreshToken: string };
 
+/**
+ * In-flight refresh calls, keyed by the refresh-token value.
+ *
+ * The backend issues single-use refresh tokens: the first /auth/refresh rotates
+ * (invalidates) the token, so a second concurrent call with the same token gets a
+ * 401 "Refresh token not found". A page mounts several components that each fire a
+ * proxied request in parallel, so on reopen (when the short-lived access token has
+ * expired) they'd all try to spend the same refresh token at once — one wins and the
+ * losers would clear the auth cookies, logging the user out. Single-flighting the
+ * refresh means concurrent callers in this process share one round-trip and all get
+ * the same rotated tokens.
+ */
+const refreshInFlight = new Map<string, Promise<Tokens | null>>();
+
+function refreshOnce(refreshToken: string): Promise<Tokens | null> {
+    const existing = refreshInFlight.get(refreshToken);
+    if (existing) return existing;
+
+    const pending = tryRefresh(refreshToken);
+    refreshInFlight.set(refreshToken, pending);
+    pending.finally(() => refreshInFlight.delete(refreshToken));
+    return pending;
+}
+
 export async function proxyToBackend(path: string, init: ProxyInit = {}): Promise<NextResponse> {
     const store = await cookies();
     let accessToken = store.get(ACCESS_TOKEN)?.value;
@@ -47,7 +71,7 @@ export async function proxyToBackend(path: string, init: ProxyInit = {}): Promis
 
     // No access token but we have a refresh token → refresh up front.
     if (!accessToken && refreshToken) {
-        rotated = await tryRefresh(refreshToken);
+        rotated = await refreshOnce(refreshToken);
         if (!rotated) return clearedUnauthorized();
         accessToken = rotated.accessToken;
     }
@@ -59,7 +83,7 @@ export async function proxyToBackend(path: string, init: ProxyInit = {}): Promis
 
     // Access token rejected → refresh once and retry.
     if (upstream.status === 401 && refreshToken) {
-        rotated = await tryRefresh(refreshToken);
+        rotated = await refreshOnce(refreshToken);
         if (!rotated) return clearedUnauthorized();
         accessToken = rotated.accessToken;
         upstream = await callBackend(path, method, accessToken, body);
