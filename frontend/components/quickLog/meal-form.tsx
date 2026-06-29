@@ -13,10 +13,12 @@ import {isoToLocalInput} from "@/features/logging/datetime";
 
 type MealFormProps = {
     entry?: MealResponse;
+    /** Called with the new meal after a successful create (not edit). */
+    onCreated?: (meal: MealResponse) => void;
     onDone: () => void;
 };
 
-export function MealForm({entry, onDone}: MealFormProps) {
+export function MealForm({entry, onCreated, onDone}: MealFormProps) {
     const isEdit = Boolean(entry);
     const {createMeal, updateMeal} = useMealMutations();
 
@@ -35,11 +37,14 @@ export function MealForm({entry, onDone}: MealFormProps) {
         try {
             if (isEdit && entry) {
                 await updateMeal.mutateAsync({id: entry.id, values});
+                toast.success("Meal updated.");
+                onDone();
             } else {
-                await createMeal.mutateAsync(values);
+                const created = await createMeal.mutateAsync(values);
+                toast.success("Meal logged.");
+                if (onCreated) onCreated(created);
+                else onDone();
             }
-            toast.success(isEdit ? "Meal updated." : "Meal logged.");
-            onDone();
         } catch (e) {
             toast.error(e instanceof Error ? e.message : "Couldn't save meal.");
         }

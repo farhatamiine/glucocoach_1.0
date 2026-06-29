@@ -3,6 +3,7 @@
 import {Controller, FormProvider, useForm} from "react-hook-form";
 import {zodResolver} from "@hookform/resolvers/zod";
 import {toast} from "sonner";
+import {Utensils} from "lucide-react";
 import {Field, FieldError, FieldLabel} from "@/components/ui/field";
 import {Input} from "@/components/ui/input";
 import {Button} from "@/components/ui/button";
@@ -14,10 +15,14 @@ import {cn} from "@/lib/utils";
 
 type BolusFormProps = {
     entry?: InsulinLog;
+    /** Pre-link this bolus to a meal (e.g. from the post-meal prompt). */
+    mealId?: number;
+    /** Name of the linked meal, shown as a chip. */
+    linkedMealName?: string;
     onDone: () => void;
 };
 
-export function BolusForm({entry, onDone}: BolusFormProps) {
+export function BolusForm({entry, mealId, linkedMealName, onDone}: BolusFormProps) {
     const isEdit = Boolean(entry);
     const {createBolus, deleteBolus} = useInsulinMutations();
 
@@ -27,6 +32,7 @@ export function BolusForm({entry, onDone}: BolusFormProps) {
             amount: entry?.amount,
             bolusType: entry?.bolusType ?? "MEAL",
             timestamp: isoToLocalInput(entry?.at),
+            mealId: entry?.mealId ?? mealId,
         },
     });
 
@@ -53,6 +59,14 @@ export function BolusForm({entry, onDone}: BolusFormProps) {
     return (
         <FormProvider {...form}>
             <form onSubmit={form.handleSubmit(submit)} className="flex flex-col gap-4 px-4 pb-4">
+                {linkedMealName && (
+                    <div
+                        className="flex items-center gap-2 rounded-lg bg-accent/60 px-3 py-2 text-xs text-accent-foreground">
+                        <Utensils className="size-3.5 shrink-0"/>
+                        <span className="truncate">Linked to <span
+                            className="font-semibold">{linkedMealName}</span></span>
+                    </div>
+                )}
                 <Controller
                     name="amount"
                     control={form.control}

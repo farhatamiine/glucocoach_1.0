@@ -9,6 +9,7 @@ import {
     listBoluses,
 } from "@/features/logging/services/insulinService";
 import type {BasalResponse, BolusResponse, InsulinLog,} from "@/features/logging/types/logging.types";
+import {parseBackendDate} from "@/features/logging/datetime";
 
 const BOLUS_KEY = ["bolus"] as const;
 const BASAL_KEY = ["basal"] as const;
@@ -39,7 +40,7 @@ export function useInsulinLogs() {
             ...(bolus.data ?? []).map(fromBolus),
             ...(basal.data ?? []).map(fromBasal),
         ];
-        return merged.sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime());
+        return merged.sort((a, b) => parseBackendDate(b.at).getTime() - parseBackendDate(a.at).getTime());
     }, [bolus.data, basal.data]);
 
     return {
