@@ -1,4 +1,5 @@
 import {request} from "@/features/logging/services/client";
+import {apiFetch} from "@/lib/apiFetch";
 import type {ProfileResponse, UserResponse} from "@/features/profile/types/profile.types";
 import type {AccountFormValues} from "@/features/profile/schemas/account.schema";
 import type {ProfileFormValues} from "@/features/profile/schemas/profile.schema";
@@ -18,7 +19,7 @@ export function updateUser(values: AccountFormValues) {
 
 /** Tolerant read: returns null when no profile exists yet (so the form can POST to create). */
 export async function getProfile(): Promise<ProfileResponse | null> {
-    const res = await fetch("/api/profile", {
+    const res = await apiFetch("/api/profile", {
         headers: {Accept: "application/json"},
         cache: "no-store",
     });

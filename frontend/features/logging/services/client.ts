@@ -1,6 +1,8 @@
+import {apiFetch} from "@/lib/apiFetch";
+
 /** Thin fetch wrapper for the logging feature — talks to the Next.js /api proxies. */
 export async function request<T>(path: string, init?: RequestInit): Promise<T> {
-    const res = await fetch(path, {
+    const res = await apiFetch(path, {
         headers: {"Content-Type": "application/json", ...(init?.headers ?? {})},
         ...init,
     });
