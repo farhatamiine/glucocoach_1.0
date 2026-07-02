@@ -1,32 +1,45 @@
-version: "1.0"
 services:
   database:
     image: postgres:17
+    restart: unless-stopped
     environment:
       - POSTGRES_DB=glucocoach
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=cgmpassword
     volumes:
       - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d glucocoach"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     networks:
       - app-network
 
+  # NOTE: service name keeps the historical typo ("mangodb") on purpose —
+  # renaming it would recreate the container on the VPS. The hostname other
+  # services use is the correct "mongodb".
   mangodb:
     image: mongo
     hostname: mongodb
+    restart: unless-stopped
     environment:
       - MONGO_INITDB_ROOT_USERNAME=cgmuser
       - MONGO_INITDB_ROOT_PASSWORD=cgmpassword
+    # Bound to loopback only: Nightscout reaches Mongo over app-network;
+    # publishing 27017 on 0.0.0.0 exposed the DB to the internet.
     ports:
-      - 27017:27017
+      - "127.0.0.1:27017:27017"
     volumes:
       - db:/data/db
       - configdb:/data/configdb
       - mongot:/data/mongot
     networks:
       - app-network
+
   nightscout:
     image: nightscout/cgm-remote-monitor:latest_dev
+    restart: unless-stopped
     depends_on:
       - mangodb
     ports:
@@ -41,22 +54,38 @@ services:
       - INSECURE_USE_HTTP=true
       - ENABLE=careportal iob cob basal boluscalc cage sage treatmentnotify cors
         dbsize
-      - API_SECRET=48f875fa-0e03-416f-b9d6-19c9afc4e197
+      - API_SECRET=${NIGHTSCOUT_API_SECRET:-48f875fa-0e03-416f-b9d6-19c9afc4e197}
 
   api:
     image: ${API_IMAGE:-glucocoach-api:latest}
     build:
       context: ./backend
       dockerfile: Dockerfile
+    restart: unless-stopped
     networks:
       - app-network
     depends_on:
-      - database
+      database:
+        condition: service_healthy
+      nightscout:
+        condition: service_started
     ports:
       - "8080:8080"
     volumes:
       - ./uploads:/app/uploads
+    healthcheck:
+      # alpine JRE image has busybox wget, no curl
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/actuator/health | grep -q UP || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 90s
     environment:
+      # The JVM must stay on UTC: entity LocalDateTime columns hold UTC
+      # wall-clock values (the client sends Date.toISOString()); legacy
+      # ZoneId.systemDefault() conversions are only correct under UTC.
+      # Per-request local-day bucketing uses the `tz` query param instead.
+      - TZ=Etc/UTC
       - SPRING_APPLICATION_NAME=SERVER
       - SPRING_DATASOURCE_URL=jdbc:postgresql://database:5432/glucocoach
       - SPRING_DATASOURCE_USERNAME=postgres
@@ -65,7 +94,12 @@ services:
       - SPRING_JPA_HIBERNATE_DDL-AUTO=update
       - SPRING_JPA_SHOW-SQL=true
       - SPRING_JPA_PROPERTIES_HIBERNATE_FORMAT_SQL=true
-      - JWT_SECRET=glucocoach-super-secret-key-must-be-at-least-32-characters-long!
+      # application.local.properties ships in the jar (spring.profiles.include=local)
+      # and would otherwise force DEBUG logging in production
+      - LOGGING_LEVEL_COM_GLUCOCOACH=INFO
+      # Override via a .env file next to this compose file (JWT_SECRET=...);
+      # the fallback keeps existing tokens valid until a secret is provisioned.
+      - JWT_SECRET=${JWT_SECRET:-glucocoach-super-secret-key-must-be-at-least-32-characters-long!}
       - JWT_EXPIRATION=86400000
       - JWT_REFRESH-EXPIRATION=604800000
       # Firebase Cloud Messaging (push alerts).
@@ -75,11 +109,11 @@ services:
       #      FIREBASE_CREDENTIALS_PATH=/run/secrets/firebase.json
       - FIREBASE_CREDENTIALS_PATH=${FIREBASE_CREDENTIALS_PATH}
       - NIGHTSCOUT_URL=http://nightscout:1337
-      - NIGHTSCOUT_API_SECRET=48f875fa-0e03-416f-b9d6-19c9afc4e197
+      - NIGHTSCOUT_API_SECRET=${NIGHTSCOUT_API_SECRET:-48f875fa-0e03-416f-b9d6-19c9afc4e197}
       # LLM meal-image analysis (Anthropic).
       # Set to your Anthropic API key to enable the /api/meals/{id}/analyze endpoint:
       #      LLM_API_KEY=sk-ant-...
-      - LLM_API_KEY=
+      - LLM_API_KEY=${LLM_API_KEY:-}
       # volumes:                                     # uncomment and fill in when enabling Firebase
       #   - /host/path/to/service-account.json:/run/secrets/firebase.json:ro
 

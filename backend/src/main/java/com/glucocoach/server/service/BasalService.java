@@ -1,5 +1,8 @@
 package com.glucocoach.server.service;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.List;
 
 import org.springframework.stereotype.Service;
@@ -11,6 +14,7 @@ import com.glucocoach.server.dto.request.BasalRequest;
 import com.glucocoach.server.dto.response.BasalResponse;
 import com.glucocoach.server.mapper.BasalMapper;
 import com.glucocoach.server.repository.BasalRepository;
+import com.glucocoach.server.util.LocalDayUtil;
 
 import lombok.RequiredArgsConstructor;
 
@@ -23,9 +27,28 @@ public class BasalService {
     private final BasalMapper basalMapper;
 
     public List<BasalResponse> getAll(String email) {
+        return getAll(email, null, null, LocalDayUtil.DEFAULT_ZONE);
+    }
+
+    /**
+     * Basal injections in the inclusive local-day window {@code [from, to]} (in {@code zone}).
+     * Both bounds null → all entries (unchanged behavior); a single bound → open-ended.
+     */
+    public List<BasalResponse> getAll(String email, LocalDate from, LocalDate to, ZoneId zone) {
         User user = ownershipValidator.getCurrentUser(email);
-        return basalRepository.findByUserIdOrderByInjectedAtDesc(user.getId())
-                .stream()
+
+        List<Basal> basals;
+        if (from == null && to == null) {
+            basals = basalRepository.findByUserIdOrderByInjectedAtDesc(user.getId());
+        } else {
+            LocalDateTime start = from != null ? LocalDayUtil.utcStartOfDay(from, zone) : LocalDayUtil.FAR_PAST;
+            LocalDateTime end = to != null ? LocalDayUtil.utcEndOfDayExclusive(to, zone) : LocalDayUtil.FAR_FUTURE;
+            basals = basalRepository
+                    .findByUserIdAndInjectedAtGreaterThanEqualAndInjectedAtLessThanOrderByInjectedAtDesc(
+                            user.getId(), start, end);
+        }
+
+        return basals.stream()
                 .map(basalMapper::toResponse)
                 .toList();
     }

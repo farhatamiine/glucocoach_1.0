@@ -16,7 +16,9 @@ import org.springframework.stereotype.Service;
 
 import com.glucocoach.server.domain.enums.BolusType;
 import com.glucocoach.server.dto.response.BolusResponse;
+import com.glucocoach.server.dto.response.DailyGlucoseSummaryResponse;
 import com.glucocoach.server.dto.response.NightscoutEntryDTO;
+import com.glucocoach.server.util.LocalDayUtil;
 
 import lombok.AllArgsConstructor;
 
@@ -40,16 +42,23 @@ public class GlucoseService {
     }
 
     public Double calculateCV(List<NightscoutEntryDTO> entries) {
-        return (calculateStdDev(entries) / calculateAverage(entries)) * 100;
+        Double average = calculateAverage(entries);
+        if (average == 0)
+            return 0.0;
+        return (calculateStdDev(entries) / average) * 100;
     }
 
     public Double calculateGMI(List<NightscoutEntryDTO> entries) {
+        if (entries.isEmpty())
+            return 0.0;
         return 3.31 + (0.02392 * calculateAverage(entries));
     }
 
     // ─── Time in Range ─────────────────────────────────────────────────────────
 
     public Double calculateTIR(List<NightscoutEntryDTO> entries) {
+        if (entries.isEmpty())
+            return 0.0;
         long count = entries.stream()
                 .filter(e -> e.getSgv() >= 70 && e.getSgv() <= 180)
                 .count();
@@ -57,25 +66,77 @@ public class GlucoseService {
     }
 
     public Double calculateTBR(List<NightscoutEntryDTO> entries) {
+        if (entries.isEmpty())
+            return 0.0;
         long count = entries.stream().filter(e -> e.getSgv() < 70).count();
         return ((double) count / entries.size()) * 100;
     }
 
     public Double calculateTAR(List<NightscoutEntryDTO> entries) {
+        if (entries.isEmpty())
+            return 0.0;
         long count = entries.stream().filter(e -> e.getSgv() > 180).count();
         return ((double) count / entries.size()) * 100;
     }
 
     /**
-     * Returns TIR (%) per calendar day for the last {@code days} days.
+     * Returns TIR (%) per calendar day for the last {@code days} days,
+     * bucketed with the default local-day boundary (Europe/Paris).
      */
     public Map<LocalDate, Double> calculateTIRByDay(int days) {
-        List<NightscoutEntryDTO> entries = nightScoutService.getEntriesByDay(days);
+        return calculateTIRByDay(days, LocalDayUtil.DEFAULT_ZONE);
+    }
+
+    /** Returns TIR (%) per local calendar day (in {@code zone}) for the last {@code days} days. */
+    public Map<LocalDate, Double> calculateTIRByDay(int days, ZoneId zone) {
+        return calculateTIRByDay(nightScoutService.getEntriesByDay(days), zone);
+    }
+
+    /** Buckets the given entries into local calendar days (in {@code zone}) and computes TIR per day. */
+    public Map<LocalDate, Double> calculateTIRByDay(List<NightscoutEntryDTO> entries, ZoneId zone) {
         return entries.stream()
                 .filter(e -> e.getSysTime() != null)
                 .collect(Collectors.groupingBy(
-                        e -> parseInstant(e.getSysTime()).atZone(ZoneId.systemDefault()).toLocalDate(),
+                        e -> parseInstant(e.getSysTime()).atZone(zone).toLocalDate(),
+                        TreeMap::new,
                         Collectors.collectingAndThen(Collectors.toList(), this::calculateTIR)));
+    }
+
+    /**
+     * One summary row per local calendar day (in {@code zone}), sorted by date
+     * ascending. Uses the exact same bucketing as {@link #calculateTIRByDay},
+     * so {@code tir} values match tirByDay for the same dates. Days without
+     * readings are omitted.
+     */
+    public List<DailyGlucoseSummaryResponse> buildDailySummaries(List<NightscoutEntryDTO> entries, ZoneId zone) {
+        Map<LocalDate, List<NightscoutEntryDTO>> byDay = entries.stream()
+                .filter(e -> e.getSysTime() != null)
+                .collect(Collectors.groupingBy(
+                        e -> parseInstant(e.getSysTime()).atZone(zone).toLocalDate(),
+                        TreeMap::new,
+                        Collectors.toList()));
+
+        return byDay.entrySet().stream()
+                .map(day -> DailyGlucoseSummaryResponse.builder()
+                        .date(day.getKey())
+                        .average(calculateAverage(day.getValue()))
+                        .tir(calculateTIR(day.getValue()))
+                        .tbr(calculateTBR(day.getValue()))
+                        .tar(calculateTAR(day.getValue()))
+                        .readings(day.getValue().size())
+                        .build())
+                .toList();
+    }
+
+    /** Entries whose sysTime falls in {@code [from, toExclusive)}. Entries without a sysTime are dropped. */
+    public List<NightscoutEntryDTO> filterWithin(List<NightscoutEntryDTO> entries, Instant from, Instant toExclusive) {
+        return entries.stream()
+                .filter(e -> e.getSysTime() != null)
+                .filter(e -> {
+                    Instant t = parseInstant(e.getSysTime());
+                    return !t.isBefore(from) && t.isBefore(toExclusive);
+                })
+                .toList();
     }
 
     // ─── Hypo / Hyper Analysis ─────────────────────────────────────────────────
@@ -142,10 +203,16 @@ public class GlucoseService {
      * and post-meal patterns.
      */
     public Map<Integer, Double> getDailyAverageByHour(List<NightscoutEntryDTO> entries) {
+        return getDailyAverageByHour(entries, LocalDayUtil.DEFAULT_ZONE);
+    }
+
+    /** Average glucose per local hour of the day (0–23) in {@code zone}. */
+    public Map<Integer, Double> getDailyAverageByHour(List<NightscoutEntryDTO> entries, ZoneId zone) {
         return entries.stream()
                 .filter(e -> e.getSysTime() != null)
                 .collect(Collectors.groupingBy(
-                        e -> parseInstant(e.getSysTime()).atZone(ZoneId.systemDefault()).getHour(),
+                        e -> parseInstant(e.getSysTime()).atZone(zone).getHour(),
+                        TreeMap::new,
                         Collectors.averagingDouble(e -> e.getSgv().doubleValue())));
     }
 
@@ -155,10 +222,15 @@ public class GlucoseService {
      * per hour of the day (0–23).
      */
     public Map<Integer, Map<String, Double>> getAGP(List<NightscoutEntryDTO> entries) {
+        return getAGP(entries, LocalDayUtil.DEFAULT_ZONE);
+    }
+
+    /** AGP percentiles per local hour of the day (0–23) in {@code zone}. */
+    public Map<Integer, Map<String, Double>> getAGP(List<NightscoutEntryDTO> entries, ZoneId zone) {
         Map<Integer, List<Double>> byHour = entries.stream()
                 .filter(e -> e.getSysTime() != null)
                 .collect(Collectors.groupingBy(
-                        e -> parseInstant(e.getSysTime()).atZone(ZoneId.systemDefault()).getHour(),
+                        e -> parseInstant(e.getSysTime()).atZone(zone).getHour(),
                         Collectors.mapping(e -> e.getSgv().doubleValue(), Collectors.toList())));
 
         Map<Integer, Map<String, Double>> agp = new TreeMap<>();

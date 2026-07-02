@@ -2,6 +2,7 @@ package com.glucocoach.server.service;
 
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
+import java.time.Instant;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.LocalDate;
@@ -51,6 +52,19 @@ public class NightScoutService {
 
     public List<NightscoutEntryDTO> getEntries(int count) {
         String url = nightscoutUrl + "/api/v1/entries.json?count=" + count;
+        return fetchEntries(URI.create(url));
+    }
+
+    /**
+     * Entries whose Nightscout {@code date} (epoch millis) falls in
+     * {@code [from, toExclusive)}. Epoch comparison is timezone-safe, unlike
+     * the string-compared {@code dateString} used by {@link #getEntriesByDay}.
+     */
+    public List<NightscoutEntryDTO> getEntriesBetween(Instant from, Instant toExclusive) {
+        String url = nightscoutUrl + "/api/v1/entries.json"
+                + "?find[date][$gte]=" + from.toEpochMilli()
+                + "&find[date][$lt]=" + toExclusive.toEpochMilli()
+                + "&count=999999";
         return fetchEntries(URI.create(url));
     }
 
