@@ -42,7 +42,9 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         // /api/auth/** is public — register, login, refresh, logout
+                        // /actuator/health is public — used by the Docker healthcheck
                         .requestMatchers("/api/auth/**",
+                                "/actuator/health",
                                 "/v3/api-docs/**",
                                 "/swagger-ui/**",
                                 "/swagger-ui.html")

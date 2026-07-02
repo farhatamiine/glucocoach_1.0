@@ -9,7 +9,8 @@
       "Bash(xmllint --noout src/main/pom.xml)",
       "Bash(xmllint --noout pom.xml)",
       "Bash(mvn clean *)",
-      "Bash(./mvnw clean *)"
+      "Bash(./mvnw clean *)",
+      "Bash(git check-ignore *)"
     ]
   }
 }

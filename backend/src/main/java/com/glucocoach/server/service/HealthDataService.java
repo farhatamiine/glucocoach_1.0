@@ -1,5 +1,6 @@
 package com.glucocoach.server.service;
 
+import java.time.LocalDate;
 import java.util.List;
 
 import org.springframework.stereotype.Service;
@@ -23,9 +24,26 @@ public class HealthDataService {
     private final HealthDataMapper healthDataMapper;
 
     public List<HealthDataResponse> getAll(String email) {
+        return getAll(email, null, null);
+    }
+
+    /**
+     * Health-data rows whose {@code date} falls in the inclusive window {@code [from, to]}.
+     * Both bounds null → all entries (unchanged behavior); a single bound → open-ended.
+     */
+    public List<HealthDataResponse> getAll(String email, LocalDate from, LocalDate to) {
         User user = ownershipValidator.getCurrentUser(email);
-        return healthDataRepository.findByUserIdOrderByDateDesc(user.getId())
-                .stream()
+
+        List<HealthData> rows;
+        if (from == null && to == null) {
+            rows = healthDataRepository.findByUserIdOrderByDateDesc(user.getId());
+        } else {
+            LocalDate start = from != null ? from : LocalDate.of(1970, 1, 1);
+            LocalDate end = to != null ? to : LocalDate.of(3000, 1, 1);
+            rows = healthDataRepository.findByUserIdAndDateBetweenOrderByDateDesc(user.getId(), start, end);
+        }
+
+        return rows.stream()
                 .map(healthDataMapper::toResponse)
                 .toList();
     }

@@ -1,7 +1,11 @@
 {
   "permissions": {
     "allow": [
-      "Bash(find /c/Users/afarhat/personal/glucocoach1.0/server -type f ! -path */target/* ! -path */.mvn/*)"
+      "Bash(find /c/Users/afarhat/personal/glucocoach1.0/server -type f ! -path */target/* ! -path */.mvn/*)",
+      "PowerShell($base = \"src\\\\main\\\\java\\\\com\\\\glucocoach\\\\server\"; Remove-Item -Confirm:$false \"$base\\\\domain\\\\LaboAnalysis.java\", \"$base\\\\repository\\\\LaboAnalysisRepository.java\", \"$base\\\\service\\\\LaboAnalysisService.java\", \"$base\\\\mapper\\\\LaboAnalysisMapper.java\", \"$base\\\\controller\\\\LaboAnalysisController.java\", \"$base\\\\dto\\\\request\\\\LaboAnalysisRequest.java\", \"$base\\\\dto\\\\response\\\\LaboAnalysisResponse.java\")",
+      "PowerShell(Remove-Item -Confirm:$false \"src\\\\test\\\\java\\\\com\\\\glucocoach\\\\server\\\\service\\\\LaboAnalysisServiceTest.java\")",
+      "PowerShell(Select-String -Path \"C:\\\\Users\\\\afarhat\\\\.claude\\\\projects\\\\C--Users-afarhat-personal-glucocoach1-0-backend\\\\f8b8e83b-f971-4d25-9289-a30c23df7b7e\\\\tool-results\\\\bj6j9ihh5.txt\" -Pattern \"Tests run:\" | ForEach-Object { $_.Line }; echo \"---exit---\"; echo $LASTEXITCODE)",
+      "PowerShell(.\\\\mvnw.cmd test 2>$null | Select-String -Pattern \"Tests run:|BUILD|ERROR\" | ForEach-Object { $_.Line })"
     ]
   }
 }

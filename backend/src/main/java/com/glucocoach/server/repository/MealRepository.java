@@ -1,5 +1,6 @@
 package com.glucocoach.server.repository;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -11,5 +12,7 @@ import com.glucocoach.server.domain.Meal;
 @Repository
 public interface MealRepository extends JpaRepository<Meal, Long> {
     List<Meal> findByUserIdOrderByTimestampDesc(Long userId);
+    List<Meal> findByUserIdAndTimestampGreaterThanEqualAndTimestampLessThanOrderByTimestampDesc(
+            Long userId, LocalDateTime start, LocalDateTime endExclusive);
     Optional<Meal> findByIdAndUserId(Long id, Long userId);
 }
